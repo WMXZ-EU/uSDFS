@@ -40,7 +40,6 @@ void setup() {
 // values of 4 or 5 will always transfer 5 sectors
 // if this is a K66 bug or simply insufficient programming is unknown
 #define COUNT 4
-#define COUNTm ((COUNT/2)*2+1)
 //
   DRESULT res = SDHC_ReadBlocks((UCHAR*) buffer, (DWORD) 0, COUNT);
   while(!SDHC_GetDMAStatus());
@@ -59,18 +58,18 @@ void loop() {
   // put your main code here, to run repeatedly:
 
   // comment next line when performance should be measured 
-//    return;
+    return;
     
     static uint32_t t0=0,t1;
     t1=micros();
-    if((sector%1000)<COUNTm) 
+    if((sector%1000)<COUNT) 
     { float Mbaud=8*512*1000.0/(t1-t0);
       Serial.printf("%d: %f s; %f Mbaud\n\r",
                   sector,(t1-t0)/1000000.0, Mbaud);
       t0=t1;
     }
     
-    DRESULT res = SDHC_ReadBlocks((UCHAR*) buffer, (DWORD) sector, COUNTm);
+    DRESULT res = SDHC_ReadBlocks((UCHAR*) buffer, (DWORD) sector, COUNT);
     while(!SDHC_GetDMAStatus());
       
 //    matrixPrint((void*) buffer,3);
