@@ -1,0 +1,17 @@
+{
+	"name": "uSDFS",
+	"frameworks": "Arduino",
+	"platforms": "Teensy",
+	"keywords": "FileSystem, SDIO",
+	"description": "WMXZ uSDFS Library",
+	"version": "0.0.9",
+	"authors":
+	{	"name": "Walter Zimmer",
+		"maintainer": true
+	},
+	"repository":
+	{	"type": "git",
+		"url": "https://github.com/wmxz-eu/uSDFS.git"
+	},
+    "examples": "examples/*/*.ino"
+}
