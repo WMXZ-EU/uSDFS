@@ -68,7 +68,7 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 	for(;count;count--)
 	{
 		  SDHC_ClearDMAStatus();
-		  rc= SDHC_ReadBlocks((ptr, sector, 1);
+		  rc= SDHC_ReadBlocks(ptr, sector, 1);
 		  if(rc != RES_OK) break;
 		  ptr+=512;
 		  while(!SDHC_GetDMAStatus());
