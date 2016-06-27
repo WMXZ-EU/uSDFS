@@ -18,7 +18,7 @@
 //              
 // RETURNS:     status of initialization(OK, nonInit, noCard, CardProtected)
 //-----------------------------------------------------------------------------  
-DSTATUS disk_initialize (UCHAR drv)
+DSTATUS disk_initialize (BYTE drv)
 {
   if(drv)
     return RES_PARERR;
@@ -35,7 +35,7 @@ DSTATUS disk_initialize (UCHAR drv)
 //              
 // RETURNS:     status of disk(OK, nonInit, noCard, CardProtected)
 //-----------------------------------------------------------------------------
-DSTATUS disk_status (UCHAR drv)
+DSTATUS disk_status (BYTE drv)
 {
   return SDHC_GetStatus();
 }
@@ -52,16 +52,12 @@ DSTATUS disk_status (UCHAR drv)
 //              
 // RETURNS:     result of operation
 //-----------------------------------------------------------------------------
-DRESULT disk_read (UCHAR drv, UCHAR* buff, DWORD sector, UINT count)
+DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 {
   if(drv || (count == 0))
     return RES_PARERR;
-
-  SDHC_ClearDMAStatus();
-  DRESULT rc= SDHC_ReadBlocks(buff, sector, count);
-  while(!SDHC_GetDMAStatus());
-
-  return rc;
+  
+  return SDHC_ReadBlocks(buff, sector, count);
 }
 
 #if	_READONLY == 0
@@ -77,28 +73,12 @@ DRESULT disk_read (UCHAR drv, UCHAR* buff, DWORD sector, UINT count)
 //              
 // RETURNS:     result of operation
 //-----------------------------------------------------------------------------
-DRESULT disk_write (UCHAR drv, const UCHAR* buff, DWORD sector, UINT count)
+DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 {
-	DRESULT rc;	
   if(drv || (count == 0))
     return RES_PARERR;
   
- #if MULTI_SECTOR == 1
-  SDHC_ClearDMAStatus();
-  rc= SDHC_WriteBlocks((UCHAR*)buff, sector, count);
-  while(!SDHC_GetDMAStatus());
-#else
-	UCHAR *ptr=(UCHAR *)buff;
-	for(;count;count--)
-	{
-		  SDHC_ClearDMAStatus();
-		  rc= SDHC_WriteBlocks((UCHAR*)buff, sector, 1);
-		  if(rc != RES_OK) break;
-		  ptr+=512;
-		  while(!SDHC_GetDMAStatus());
-	}
-#endif
-  return rc;
+  return SDHC_WriteBlocks((Byte*)buff, sector, count);
 }
 #endif
 
@@ -113,7 +93,7 @@ DRESULT disk_write (UCHAR drv, const UCHAR* buff, DWORD sector, UINT count)
 //              
 // RETURNS:     result of operation
 //-----------------------------------------------------------------------------
-DRESULT disk_ioctl (UCHAR drv, UCHAR ctrl, void* buff)
+DRESULT disk_ioctl (BYTE drv, BYTE ctrl, void* buff)
 {
   DRESULT result = RES_OK;
   
@@ -165,7 +145,6 @@ DRESULT disk_ioctl (UCHAR drv, UCHAR ctrl, void* buff)
       */
       result = RES_PARERR;
       break;
-#ifdef OLD_IOCTL
     case CTRL_ERASE_SECTOR:
       /*
       Erases a part of the flash memory specified by a DWORD array 
@@ -177,7 +156,6 @@ DRESULT disk_ioctl (UCHAR drv, UCHAR ctrl, void* buff)
       */
       result = RES_PARERR;
       break;
-#endif
     default:
       return RES_PARERR;
     

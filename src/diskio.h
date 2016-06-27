@@ -11,7 +11,6 @@ extern "C" {
 
 #include "integer.h"
 
-#define MULTI_SECTOR   0 // set 1 for multi sector write, 0 for single sector write
 
 /* Status of Disk Functions */
 typedef BYTE	DSTATUS;
@@ -23,7 +22,7 @@ typedef enum {
 	RES_WRPRT,		/* 2: Write Protected */
 	RES_NOTRDY,		/* 3: Not Ready */
 	RES_PARERR,		/* 4: Invalid Parameter */
-    RES_NONRSPNS            /* 5: No Response */ // from old diskio.h
+  RES_NONRSPNS            /* 5: No Response */
 } DRESULT;
 
 
@@ -59,6 +58,7 @@ DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
 #define CTRL_LOCK			6	/* Lock/Unlock media removal */
 #define CTRL_EJECT			7	/* Eject media */
 #define CTRL_FORMAT			8	/* Create physical format on the media */
+#define CTRL_ERASE_SECTOR  9 /* Force erased a block of sectors (for only _USE_ERASE) */
 
 /* MMC/SDC specific ioctl command */
 #define MMC_GET_TYPE		10	/* Get card type */
