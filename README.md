@@ -10,5 +10,9 @@ History:
     Initial upload (K66 4-Bit SDIO)
 
     No speed optimization in FAT system
+- 27-jun-2016
+
+    work-around to get f_read/f_write working with buffer sizes >= 1024 bytes
+    
 
 
