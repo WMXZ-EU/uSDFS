@@ -11,7 +11,6 @@
 #include <tchar.h>
 typedef unsigned __int64 QWORD;
 
-
 #else			/* Embedded platform */
 
 /* These types MUST be 16-bit or 32-bit */
