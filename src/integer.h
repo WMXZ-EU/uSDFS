@@ -19,6 +19,7 @@ typedef int				INT;
 typedef unsigned int	UINT;
 
 /* This type MUST be 8-bit */
+#undef BYTE
 typedef unsigned char	BYTE;
 
 /* These types MUST be 16-bit */
