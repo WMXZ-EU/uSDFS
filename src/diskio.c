@@ -70,7 +70,7 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 		  SDHC_ClearDMAStatus();
 		  rc= SDHC_ReadBlocks(ptr, sector, 1);
 		  if(rc != RES_OK) break;
-		  ptr+=512;
+		  ptr+=512; sector++;
 		  while(!SDHC_GetDMAStatus());
 	}
 #endif
@@ -107,7 +107,7 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 		  SDHC_ClearDMAStatus();
 		  rc= SDHC_WriteBlocks(ptr, sector, 1);
 		  if(rc != RES_OK) break;
-		  ptr+=512;
+		  ptr+=512; sector++;
 		  while(!SDHC_GetDMAStatus());
 	}
 #endif
