@@ -118,8 +118,8 @@
 /   3: Enable LFN with dynamic working buffer on the HEAP.
 /
 /  To enable the LFN, Unicode handling functions (option/unicode.c) must be added
-/  to the project. The working buffer occupies (_MAX_LFN + 1) * 2 bytes and
-/  additional 608 bytes at exFAT enabled. _MAX_LFN can be in range from 12 to 255.
+/  to the project. The working buffer occupies (_MAX_LFN + 1) * 2 UCHARs and
+/  additional 608 UCHARs at exFAT enabled. _MAX_LFN can be in range from 12 to 255.
 /  It should be set 255 to support full featured LFN operations.
 /  When use stack for the working buffer, take care on stack overflow. When use heap
 /  memory for the working buffer, memory management functions, ff_memalloc() and
@@ -214,7 +214,7 @@
 
 #define	_FS_TINY	0
 /* This option switches tiny buffer configuration. (0:Normal or 1:Tiny)
-/  At the tiny configuration, size of the file object (FIL) is reduced _MAX_SS bytes.
+/  At the tiny configuration, size of the file object (FIL) is reduced _MAX_SS UCHARs.
 /  Instead of private sector buffer eliminated from the file object, common sector
 /  buffer in the file system object (FATFS) is used for the file data transfer. */
 

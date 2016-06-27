@@ -17,58 +17,15 @@
 #include "localKinetis.h"
 #endif
 
-// type definitions for 'original' sdhc.c 
+// type definitions for 'original' sdhc.c is in original main.h
 typedef unsigned int   LWord;
 typedef signed int     sLWord;
 typedef unsigned short  Word;
 typedef signed short    sWord;
-typedef unsigned char   Byte;
-typedef signed char     sByte;
+typedef unsigned char   UCHAR;
+typedef signed char     sUCHAR;
 
 #include "diskio.h"
-
-#if 0
-
-/* These types must be 16-bit, 32-bit or larger integer */
-typedef int        INT;
-typedef unsigned int  UINT;
-
-/* These types must be 8-bit integer */
-typedef char      CHAR;
-typedef unsigned char UCHAR;
-//typedef unsigned char BYTE; //Arduino does not like this
-
-/* These types must be 16-bit integer */
-typedef short     SHORT;
-typedef unsigned short  USHORT;
-typedef unsigned short  WORD;
-typedef unsigned short  WCHAR;
-
-/* These types must be 32-bit integer */
-typedef int      LONG;
-typedef unsigned int ULONG;
-typedef unsigned int DWORD;
-
-/* Status of Disk Functions */
-typedef unsigned short  DSTATUS;
-
-/* Results of Disk Functions */
-typedef enum {
-  RES_OK = 0,   /* 0: Successful */
-  RES_ERROR,    /* 1: R/W Error */
-  RES_WRPRT,    /* 2: Write Protected */
-  RES_NOTRDY,   /* 3: Not Ready */
-  RES_PARERR,   /* 4: Invalid Parameter */
-  RES_NONRSPNS            /* 5: No Response */
-}DRESULT;
-
-/* Disk Status Bits (DSTATUS) */
-
-#define STA_NOINIT    0x01  /* Drive not initialized */
-#define STA_NODISK    0x02  /* No medium in the drive */
-#define STA_PROTECT   0x04  /* Write protected */
-
-#endif
 
 /******************************************************************************
 * Constants
@@ -141,9 +98,9 @@ typedef enum {
 #define SDHC_BLOCK_SIZE                     512
 
 #define SDHC_DO4BITS                        1
-#ifndef SDHC_USE_ISR
+//#ifndef SDHC_USE_ISR
 	#define SDHC_USE_ISR                    0
-#endif
+//#endif
 
 /******************************************************************************
 * Macros 
@@ -157,8 +114,8 @@ typedef struct
 {
   DSTATUS status;
   LWord   address;
-  Byte    highCapacity;  
-  Byte    version2;
+  UCHAR    highCapacity;  
+  UCHAR    version2;
   LWord   numBlocks;
   LWord   lastCardStatus;
 }SD_CARD_DESCRIPTOR;

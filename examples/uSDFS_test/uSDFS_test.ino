@@ -1,7 +1,9 @@
+//Copyright 2016 by Walter Zimmer
+
 #include "ff.h"                   // File System
 
 /* Stop with dying message */
-void die ( FRESULT rc){  printf("Failed with rc=%u.\n", rc);  for (;;) ; }
+void die ( FRESULT rc){  Serial.printf("Failed with rc=%u.\n", rc);  for (;;) ; }
 
 void setup() {
   // put your setup code here, to run once:
@@ -16,7 +18,7 @@ void setup() {
   DIR dir;        /* Directory object */
   FILINFO fno;      /* File information object */
   UINT bw, br;
-  CHAR buff[128];
+  char buff[128];
 
   f_mount (&fatfs, "/", 0);      /* Mount/Unmount a logical drive */
 
@@ -76,26 +78,3 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 }
-
-
-/*---------------------------------------------------------*/
-/* User Provided Timer Function for FatFs module           */
-/*---------------------------------------------------------*/
-//to be done, hier provides constant time
-DWORD get_fattime (void)
-{
-  uint16_t year=2016;
-  uint16_t month=6;
-  uint16_t day=26;
-  uint16_t hour=11;
-  uint16_t min=0;
-  uint16_t second=0;
-  
-	return	  ((DWORD)(year - 1980) << 25)	/* Fixed to Jan. 1, 2010 */
-			| ((DWORD)month << 21)
-			| ((DWORD)day << 16)
-			| ((DWORD)hour << 11)
-			| ((DWORD)min << 5)
-			| ((DWORD)second >> 1);
-}
-

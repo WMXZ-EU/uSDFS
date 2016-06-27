@@ -19,6 +19,15 @@
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of disk I/O functions */
 
+#include "kinetis.h"
+#include "localKinetis.h"
+
+/* some aux functions for pure c code */
+void logg(char c);
+void printb(uint32_t x);
+/* end aux functions */
+
+
 
 /*--------------------------------------------------------------------------
 
@@ -3500,10 +3509,11 @@ FRESULT f_write (
 	if (!(fp->flag & FA_WRITE)) LEAVE_FF(fs, FR_DENIED);	/* Check access mode */
 
 	/* Check fptr wrap-around (file size cannot exceed the limit on each FAT specs) */
-	if ((_FS_EXFAT && fs->fs_type == FS_EXFAT && fp->fptr + btw < fp->fptr)
-		|| (DWORD)fp->fptr + btw < (DWORD)fp->fptr) {
+	if ((_FS_EXFAT && (fs->fs_type == FS_EXFAT) && (fp->fptr + btw < fp->fptr))
+		|| ((DWORD)fp->fptr + btw < (DWORD)fp->fptr)) {
 		btw = (UINT)(0xFFFFFFFF - (DWORD)fp->fptr);
 	}
+//	printb(btw);
 
 	for ( ;  btw;							/* Repeat until all data written */
 		wbuff += wcnt, fp->fptr += wcnt, fp->obj.objsize = (fp->fptr > fp->obj.objsize) ? fp->fptr : fp->obj.objsize, *bw += wcnt, btw -= wcnt) {
