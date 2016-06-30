@@ -59,6 +59,7 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
   if(drv || (count == 0))
     return RES_PARERR;
 
+	while(!SDHC_isReady());
  #if MULTI_SECTOR == 1
   SDHC_ClearDMAStatus();
   rc= SDHC_ReadBlocks(buff, sector, count);
@@ -96,10 +97,13 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
   if(drv || (count == 0))
     return RES_PARERR;
   
+	while(!SDHC_isReady()); // make sure uSD card is not busy
+	
  #if MULTI_SECTOR == 1
   SDHC_ClearDMAStatus();
   rc= SDHC_WriteBlocks((BYTE*)buff, sector, count);
   while(!SDHC_GetDMAStatus());
+
 #else
 	BYTE *ptr=(BYTE *)buff;
 	for(;count;count--)
@@ -132,8 +136,6 @@ DRESULT disk_ioctl (BYTE drv, BYTE ctrl, void* buff)
   
   if(drv)
     return RES_PARERR;
-  
-  
   
   switch(ctrl)
   {

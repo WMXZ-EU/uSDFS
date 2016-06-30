@@ -11,7 +11,7 @@ extern "C" {
 
 #include "integer.h"
 
-#define MULTI_SECTOR   0 // set 1 for multi sector write, 0 for single sector write
+#define MULTI_SECTOR   1 // set 1 for multi sector write, 0 for single sector write
 
 /* Status of Disk Functions */
 typedef BYTE	DSTATUS;

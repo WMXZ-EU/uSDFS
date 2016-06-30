@@ -74,5 +74,5 @@ void loop() {
       
 //    matrixPrint((void*) buffer,3);
 
-    sector+=COUNTm;
+    sector+=COUNT;
 }

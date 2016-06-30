@@ -8,23 +8,24 @@
 
 #include "kinetis.h"
 #include "localKinetis.h"
+#include "core_pins.h" // testing only
 
 #include "sdhc.h"
 #include "sdhc_prv.h"
 
 /* some aux functions for pure c code */
 #include "usb_serial.h"
-void logg(char c) {usb_serial_putchar(c); usb_serial_flush_output();}
+void logg(char c) {serial_putchar(c); serial_flush();}
 void printb(uint32_t x)
 { char c;
   int ii;
   for(ii=31;ii>=0;ii--)
-  { if(!((ii+1)%4))usb_serial_putchar(' ');
-    c=(x&1<<ii)?'1':'0'; usb_serial_putchar(c);
+  { if(!((ii+1)%4)) serial_putchar(' ');
+    c=(x&1<<ii)?'1':'0'; serial_putchar(c);
   }
-  usb_serial_putchar('\r');
-  usb_serial_putchar('\n');
-  usb_serial_flush_output();
+  serial_putchar('\r');
+  serial_putchar('\n');
+  serial_flush();
 }
 /* end aux functions */
 
@@ -135,9 +136,10 @@ DSTATUS SDHC_Init(void)
     
     
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA 
-  #if SDHC_USE_ISR
-    SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN_MASK;
+  #if SDHC_USE_ISR == 1
+	NVIC_SET_PRIORITY(IRQ_SDHC, 6*16); //4*64 is Serial
     NVIC_ENABLE_IRQ(IRQ_SDHC);
+    SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN_MASK;
   #endif
 #endif
 
@@ -187,6 +189,28 @@ LWord SDHC_GetBlockCnt(void)
 }
 
 //-----------------------------------------------------------------------------
+// FUNCTION:    SDHC_isReady
+// SCOPE:       SDHC Controller public related function
+// DESCRIPTION: Function provides SDHC readyness status
+//              
+// PARAMETERS:  none
+//              
+// RETURNS:     (0,1) (not ready, is ready)
+//-----------------------------------------------------------------------------  
+DSTATUS SDHC_isReady(void)
+{  
+#if SDHC_USE_ISR == 0
+	delayMicroseconds(5); // need this workaround, don't know why
+#endif
+	DSTATUS result = ((SDHC_PRSSTAT & 0x01000000)==0x01000000);
+	if(!result)
+	{
+		return !SDHC_CMD13_SendStatus();
+ 	}
+	return result;
+}
+
+//-----------------------------------------------------------------------------
 // FUNCTION:    SDHC_ISR
 // SCOPE:       SDHC Controller public related function
 // DESCRIPTION: Function provides SDHC interrupt service routine
@@ -196,19 +220,20 @@ LWord SDHC_GetBlockCnt(void)
 // RETURNS:     nil
 //-----------------------------------------------------------------------------  
 void sdhc_isr(void)
-{
-//  printb(SDHC_IRQSTAT);
-  if (SDHC_WaitStatus(SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK) & (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK))
-  { 
-    SDHC_IRQSTAT |= SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK;
+{	
+	while(!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC_MASK)) ;	// wait for transfer to complete
+	__disable_irq();
+   SDHC_IRQSIGEN = 0x00000000; // Disable Interrupt 
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_BRR_MASK)	SDHC_IRQSTAT = SDHC_IRQSTAT_BRR_MASK;
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_BWR_MASK)	SDHC_IRQSTAT = SDHC_IRQSTAT_BWR_MASK;
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_DINT_MASK)	SDHC_IRQSTAT = SDHC_IRQSTAT_DINT_MASK;
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_TC_MASK)		SDHC_IRQSTAT = SDHC_IRQSTAT_TC_MASK;
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_CC_MASK)		SDHC_IRQSTAT = SDHC_IRQSTAT_CC_MASK;
+
+    SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN_MASK;
     m_sdhc_dma_status=1;
-  }
-  
-  {
-      SDHC_IRQSTAT |= SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK;
-      (void)SDHC_CMD12_StopTransferWaitForBusy();
-      m_sdhc_dma_status=-1;
-  }
+	__enable_irq();
+
 }
 
 //-----------------------------------------------------------------------------
@@ -408,8 +433,7 @@ DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count)
     sector *= 512;
   
   SDHC_IRQSTAT = 0xffff;
-  
-  
+ 
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
   while(SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK) {};
   SDHC_IRQSTAT |= SDHC_IRQSTAT_TC_MASK;
@@ -472,7 +496,7 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 {
   DRESULT result;
   LWord* pData = (LWord*)buff;
-  
+
   // Check if this is ready
   if(sdCardDesc.status != 0)
      return RES_NOTRDY;
@@ -491,7 +515,6 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
   while(SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK) {};
   SDHC_IRQSTAT |= SDHC_IRQSTAT_TC_MASK;
   SDHC_DSADDR  = (LWord)pData;  
-  
 #endif   
 	 m_sdhc_dma_status=0;
 
@@ -502,7 +525,8 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
     if(result != RES_OK)
       return result;
     result = SDHC_WriteBlock(pData);
-  }else
+  }
+  else
   {
     // Multi Block write access should be used
 
@@ -624,7 +648,8 @@ static DRESULT SDHC_SetBaudrate(uint32_t kbaudrate)
 static LWord SDHC_WaitStatus(LWord mask)
 {
     LWord             result;
-    LWord             timeout = -1;
+//    LWord             timeout = -1;
+    LWord             timeout = 1<<24;
     do
     {
         result = SDHC_IRQSTAT & mask;
@@ -684,22 +709,26 @@ static DRESULT SDHC_ReadBlock(LWord* pData)
 #elif SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
   /* Wait for response */
 
-  #if SDHC_USE_ISR
+  #if SDHC_USE_ISR == 1
     return RES_OK;
+
   #else
-  if (SDHC_WaitStatus(SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK) & (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK))
-  { 
-     SDHC_IRQSTAT |= SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK;
-	 m_sdhc_dma_status=1;
-	 return RES_OK;
-  }
-  
-  {
-      SDHC_IRQSTAT |= SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK;
-      (void)SDHC_CMD12_StopTransferWaitForBusy();
-	 m_sdhc_dma_status=-1;
-      return RES_ERROR;
-  }
+	  if (SDHC_WaitStatus(	SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK |
+							SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK |
+							SDHC_IRQSTAT_DINT_MASK |SDHC_IRQSTAT_TC_MASK) 
+							& (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK))
+	  { 
+		 SDHC_IRQSTAT |= (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK);
+		 m_sdhc_dma_status=1;
+		 return RES_OK;
+	  }
+	  
+	  {
+		  SDHC_IRQSTAT |= SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK;
+		  (void)SDHC_CMD12_StopTransferWaitForBusy();
+		 m_sdhc_dma_status=-1;
+		  return RES_ERROR;
+	  }
   #endif
 #endif  
 }
@@ -753,27 +782,28 @@ static DRESULT SDHC_WriteBlock(const LWord* pData)
  //--------------------------------------------
 #elif SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
   /* Wait for response */
+  #if SDHC_USE_ISR == 1
+    return RES_OK; // nothing to wait (will be done in ISR)
 
-  #if SDHC_USE_ISR
-    return RES_OK;
   #else
-
-  if (SDHC_WaitStatus(SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK) & (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK))
-  {
-    SDHC_IRQSTAT |= SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK;
-	 m_sdhc_dma_status=1;
-    return RES_OK;
-  }
-  
-  {
-      SDHC_IRQSTAT |= SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK;
-      (void)SDHC_CMD12_StopTransferWaitForBusy();
-	 m_sdhc_dma_status=-1;
-      return RES_ERROR;
-  }
+	  if (SDHC_WaitStatus(	SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK |
+							SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | 
+							SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK) 
+							& (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK))
+	  {
+		 SDHC_IRQSTAT |= (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK);
+		 m_sdhc_dma_status=1;
+		 return RES_OK;
+	  }
+	  
+	  {
+		  SDHC_IRQSTAT |= SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK;
+		  (void)SDHC_CMD12_StopTransferWaitForBusy();
+		 m_sdhc_dma_status=-1;
+		  return RES_ERROR;
+	  }
   #endif
 #endif  
-  
 }
 
 //-----------------------------------------------------------------------------
@@ -794,16 +824,16 @@ static DRESULT SDHC_CMD_Do(LWord xfertyp)
     // Wait for cmd line idle // to do timeout PRSSTAT[CDIHB] and the PRSSTAT[CIHB]
     while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK))
         { };
-    
+
     SDHC_XFERTYP = xfertyp;
 
     /* Wait for response */
     if (SDHC_WaitStatus(SDHC_IRQSTAT_CIE_MASK | SDHC_IRQSTAT_CEBE_MASK | SDHC_IRQSTAT_CCE_MASK | SDHC_IRQSTAT_CC_MASK) != SDHC_IRQSTAT_CC_MASK)
-    {
-        SDHC_IRQSTAT |= SDHC_IRQSTAT_CTOE_MASK | SDHC_IRQSTAT_CIE_MASK | SDHC_IRQSTAT_CEBE_MASK | SDHC_IRQSTAT_CCE_MASK | SDHC_IRQSTAT_CC_MASK;
+    {   SDHC_IRQSTAT |= SDHC_IRQSTAT_CTOE_MASK | SDHC_IRQSTAT_CIE_MASK | SDHC_IRQSTAT_CEBE_MASK | 
+						SDHC_IRQSTAT_CCE_MASK | SDHC_IRQSTAT_CC_MASK;
         return RES_ERROR;
     }
-
+	
     /* Check card removal */
     if (SDHC_IRQSTAT & SDHC_IRQSTAT_CRM_MASK)
     {
@@ -1105,6 +1135,53 @@ static DRESULT SDHC_CMD12_StopTransferWaitForBusy(void)
 }
 
 //-----------------------------------------------------------------------------
+// FUNCTION:    SDHC_CMD13_SendStatus
+// SCOPE:       SDHC Controller private related function
+// DESCRIPTION: Function sends CMD 13 to send Status
+//              
+// PARAMETERS:  none
+//              
+// RETURNS:     result
+//----------------------------------------------------------------------------- 
+static DRESULT SDHC_CMD13_SendStatus(void)
+{
+	LWord xfertyp;
+  DRESULT result;
+  
+  	// Clear Command Complete bit
+	SDHC_IRQSTAT = 0xFFFFFFFF;
+
+ 	//
+ 	SDHC_CMDARG =  0;
+	xfertyp =  (SDHC_XFERTYP_CMDINX(SDHC_CMD13) | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48)
+					 |SDHC_XFERTYP_CICEN_MASK
+ 					 |SDHC_XFERTYP_CCCEN_MASK);
+					
+	SDHC_XFERTYP = xfertyp;
+ 	while ((SDHC_IRQSTAT & SDHC_IRQSTAT_CC_MASK)!=SDHC_IRQSTAT_CC_MASK) ; 
+	
+	while((SDHC_IRQSTAT & SDHC_IRQSTAT_CTOE_MASK)==SDHC_IRQSTAT_CTOE_MASK)
+	{
+		SDHC_IRQSTAT = 0xFFFFFFFF;
+
+ 		//
+ 		SDHC_CMDARG =  0;
+		xfertyp =  (SDHC_XFERTYP_CMDINX(SDHC_CMD13) | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48)
+						 |SDHC_XFERTYP_CICEN_MASK
+						 |SDHC_XFERTYP_CCCEN_MASK);
+						
+		SDHC_XFERTYP = xfertyp;
+	}
+
+
+  
+    // Here can be checked response in RESPONSE register    
+        uint32_t status_reg = SDHC_CMDRSP0;
+		//
+		return (((status_reg)>>8)&0x01); // (1 means ready for data) 
+}
+
+//-----------------------------------------------------------------------------
 // FUNCTION:    SDHC_CMD16_SetBlockSize
 // SCOPE:       SDHC Controller private related function
 // DESCRIPTION: Function sends CMD 8 to set block size
@@ -1148,7 +1225,7 @@ static DRESULT SDHC_CMD17_ReadBlock(LWord sector)
   LWord xfertyp;
   DRESULT result;
   
-  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
+//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
   
   SDHC_CMDARG = sector;
   
@@ -1164,6 +1241,7 @@ static DRESULT SDHC_CMD17_ReadBlock(LWord sector)
 #endif
                   );
   
+#if SDHC_USE_ISR == 0
   result = SDHC_CMD_Do(xfertyp);
     
   if(result == RES_OK)
@@ -1171,6 +1249,13 @@ static DRESULT SDHC_CMD17_ReadBlock(LWord sector)
     // Here can be checked response in RESPONSE register    
         (void)SDHC_CMDRSP0;
   }
+#else
+    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK)) { };
+
+    SDHC_XFERTYP = xfertyp;
+	
+	result = RES_OK;
+#endif
   
   return result;
 }
@@ -1190,7 +1275,7 @@ static DRESULT SDHC_CMD18_ReadBlocks(LWord sector, LWord count)
   LWord xfertyp;
   DRESULT result;
   
-  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
+//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
   
   SDHC_CMDARG = sector;
 //  SDHC_BLKATTR &= ~(SDHC_BLKATTR_BLKCNT_MASK);  
@@ -1205,6 +1290,8 @@ static DRESULT SDHC_CMD18_ReadBlocks(LWord sector, LWord count)
                   | SDHC_XFERTYP_DMAEN_MASK
 #endif
                   );
+
+#if SDHC_USE_ISR == 0
   result = SDHC_CMD_Do(xfertyp);
     
   if(result == RES_OK)
@@ -1212,7 +1299,14 @@ static DRESULT SDHC_CMD18_ReadBlocks(LWord sector, LWord count)
     // Here can be checked response in RESPONSE register    
         (void)SDHC_CMDRSP0;
   }
-  
+  #else
+    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK)) { };
+
+    SDHC_XFERTYP = xfertyp;
+	
+	result = RES_OK;
+#endif
+
   return result;
 }
 
@@ -1230,7 +1324,7 @@ static DRESULT SDHC_CMD24_WriteBlock(LWord sector)
   LWord xfertyp;
   DRESULT result;
 
-  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
+//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
   
   SDHC_CMDARG = sector;
 //  SDHC_BLKATTR &= ~(SDHC_BLKATTR_BLKCNT_MASK);  
@@ -1245,13 +1339,22 @@ static DRESULT SDHC_CMD24_WriteBlock(LWord sector)
 #endif
                   );                   
   
+  
+#if SDHC_USE_ISR == 0
   result = SDHC_CMD_Do(xfertyp);
-    
+
   if(result == RES_OK)
   {
     // Here can be checked response in RESPONSE register    
     (void)SDHC_CMDRSP0;
   }
+#else
+    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK)) { };
+
+    SDHC_XFERTYP = xfertyp;
+	
+	result = RES_OK;
+#endif
   
   return result;
 }
@@ -1271,7 +1374,7 @@ static DRESULT SDHC_CMD25_WriteBlocks(LWord sector, LWord count)
   LWord xfertyp;
   DRESULT result;
  
-  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
+//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
  
   SDHC_CMDARG = sector;
 //  SDHC_BLKATTR &= ~(SDHC_BLKATTR_BLKCNT_MASK);  
@@ -1286,14 +1389,22 @@ static DRESULT SDHC_CMD25_WriteBlocks(LWord sector, LWord count)
                   | SDHC_XFERTYP_DMAEN_MASK
 #endif
                   );                   
-                   
-  result = SDHC_CMD_Do(xfertyp);
-    
+
+#if SDHC_USE_ISR == 0
+   result = SDHC_CMD_Do(xfertyp);
+
   if(result == RES_OK)
   {
     // Here can be checked response in RESPONSE register    
         (void)SDHC_CMDRSP0;
   }
+#else
+    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK)) { };
+
+    SDHC_XFERTYP = xfertyp;
+	
+	result = RES_OK;
+#endif
   
   return result; 
 }
@@ -1342,3 +1453,75 @@ static DRESULT SDHC_ACMD41_SendOperationCond(LWord cond)
   return result; 
 }
 
+#if 0
+uint32_t CMD13_SEND_STATUS(uint32_t card_rca)
+{
+	uint32_t status_reg;
+	
+    #if (defined(DEBUG_INFO))
+		printf("\n\tcard status cmd start (13) \n");
+	#endif
+
+	while(esdhc_get_cardbusy()); // Wait Card free
+	while(esdhc_get_cihb() != 0);  // waiting command line is available	
+	
+	// Clear Command Complete bit
+	SDHC_IRQSTAT = 0xFFFFFFFF;
+
+ 	//
+ 	SDHC_CMDARG =  card_rca;
+ 	SDHC_XFERTYP =  MMC_CMD13
+					|SDHC_XFERTYP_CICEN_MASK
+ 					|SDHC_XFERTYP_CCCEN_MASK;
+ 	while ((SDHC_IRQSTAT & SDHC_IRQSTAT_CC_MASK)!=SDHC_IRQSTAT_CC_MASK) ; 
+	
+	while((SDHC_IRQSTAT & SDHC_IRQSTAT_CTOE_MASK)==SDHC_IRQSTAT_CTOE_MASK)
+	{
+		SDHC_IRQSTAT = 0xFFFFFFFF;
+
+ 		//
+ 		SDHC_CMDARG =  card_rca;
+ 		SDHC_XFERTYP =  MMC_CMD13
+						|SDHC_XFERTYP_CICEN_MASK
+ 						|SDHC_XFERTYP_CCCEN_MASK;
+	}
+
+ 	#if (defined(DEBUG_INFO))
+ 		if(SDHC_IRQSTAT & SDHC_IRQSTAT_CC_MASK)
+ 			printf("\tcard status cmd done (13) \n");
+ 		else 
+			printf("\tcard status cmd timeout \n");
+	#endif
+	
+	if((SDHC_IRQSTAT&IRQ_ERROR_MASK)!= 0x0) 
+          printf("Error: CMD13_SEND_STATUS SDHC_IRQSTAT  =%x \n",SDHC_IRQSTAT);
+
+	status_reg = Rd_Response48();
+	
+/*	
+	Add_OutOfRange 	= (uint8)(((status_reg)>>31)&0x01);
+	Add_Misalign 		= (uint8)(((status_reg)>>30)&0x01);
+	Blk_Len_Err 			= (uint8)(((status_reg)>>29)&0x01);
+	Erase_Seq_Err 		= (uint8)(((status_reg)>>28)&0x01);
+	Erase_Param 		= (uint8)(((status_reg)>>27)&0x01);
+	Wp_Violation 		= (uint8)(((status_reg)>>26)&0x01);
+	Card_Is_Locked 		= (uint8)(((status_reg)>>25)&0x01);
+	Lock_Unlock_Failed 	= (uint8)(((status_reg)>>24)&0x01);
+	Com_CRC_Err 		= (uint8)(((status_reg)>>23)&0x01);
+	Illegal_Cmd 			= (uint8)(((status_reg)>>22)&0x01);
+	Card_Ecc_Fail 		= (uint8)(((status_reg)>>21)&0x01);
+	CC_Err 				= (uint8)(((status_reg)>>20)&0x01);
+	Err 				= (uint8)(((status_reg)>>19)&0x01);
+	UndErrun 			= (uint8)(((status_reg)>>18)&0x01);
+	OverRun			= 	  (uint8)(((status_reg)>>17)&0x01);
+	CidCsd_Overwrite 	= (uint8)(((status_reg)>>16)&0x01);
+	WP_Erase_Skip 		= (uint8)(((status_reg)>>15)&0x01);
+	Erase_Reset 		= (uint8)(((status_reg)>>13)&0x01);
+	Current_State 		= (uint8)(((status_reg)>>9)&0x0f);
+	Ready_For_Data 	= (uint8)(((status_reg)>>8)&0x01);
+	Switch_Err 			= (uint8)(((status_reg)>>7)&0x01);
+	App_Cmd 			= (uint8)(((status_reg)>>5)&0x01);	
+*/
+	return status_reg;
+}
+#endif

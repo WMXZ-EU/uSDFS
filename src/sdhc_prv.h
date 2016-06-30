@@ -65,6 +65,7 @@ static DRESULT SDHC_CMD8_SetInterface(LWord cond);
 static DRESULT SDHC_CMD9_GetParameters(LWord address);
 static DRESULT SDHC_CMD12_StopTransfer(void);
 static DRESULT SDHC_CMD12_StopTransferWaitForBusy(void);
+static DRESULT SDHC_CMD13_SendStatus(void);
 static DRESULT SDHC_CMD16_SetBlockSize(LWord block_size);
 static DRESULT SDHC_CMD17_ReadBlock(LWord sector);
 static DRESULT SDHC_CMD18_ReadBlocks(LWord sector, LWord count);

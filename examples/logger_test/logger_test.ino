@@ -1,7 +1,9 @@
 //Copyright 2016 by Walter Zimmer
+// Version 29-jun-16
 //
 #include "ff.h"
-#include "sdhc.h"
+
+#define SERIAL Serial1
 
 FRESULT rc;        /* Result code */
 FATFS fatfs;      /* File system object */
@@ -14,17 +16,18 @@ void timer_init(void);
 void timer_start(void);
 struct tm seconds2tm(uint32_t tt);
 
+#define BUFFSIZE (16*128) 
+uint8_t buffer[BUFFSIZE] __attribute__( ( aligned ( 16 ) ) );
+UINT wr;
+
 /* Stop with dying message */
-void die( FRESULT rc)
-{   Serial.printf("Failed with rc=%u.\n", rc); 
-    Serial.flush();
-    for (;;) ; 
-}
+void die( FRESULT rc) { SERIAL.printf("Failed with rc=%u.\n", rc); for (;;) ; }
 
 void setup()
 {
-  while(!Serial);
-  Serial.printf("Logger_test\n");
+  while(!SERIAL);
+  SERIAL.begin(115200,SERIAL_8N1_RXINV_TXINV);
+  SERIAL.println("\nLogger_test");
   
   f_mount (&fatfs, "/", 0);      /* Mount/Unmount a logical drive */
 
@@ -49,7 +52,7 @@ void timer_start(void)
 {//    
 	PIT_LDVAL0 = F_BUS/150; // setup timer 0 for (F_BUS/frequency) cycles     
 	PIT_TCTRL0 = 2; // enable Timer 0 interrupts      
-	NVIC_SET_PRIORITY(IRQ_PIT_CH0, 8*16); 
+	NVIC_SET_PRIORITY(IRQ_PIT_CH0, 9*16); 
 	NVIC_ENABLE_IRQ(IRQ_PIT_CH0);
 	PIT_TCTRL0 |= 1; // start Timer 0
 }
@@ -68,15 +71,12 @@ uint32_t ifn=0;
 uint32_t isFileOpen=0;
 char filename[80];
 
-#define BUFFSIZE (16*128) 
-uint8_t buffer[BUFFSIZE] __attribute__( ( aligned ( 16 ) ) );
-UINT wr;
 
 void doProcessing(void)
 {	//
   if(isProcessing)
   {
-    Serial.printf("-");
+    SERIAL.printf("-");
     return;  
   }
   isProcessing=1;
@@ -96,7 +96,7 @@ void doProcessing(void)
     {
       // open new file
       sprintf(filename,"t_%05d.dat",ifn++);
-      Serial.println(filename);
+      SERIAL.println(filename);SERIAL.flush();
       rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS);
       if (rc) die(rc);
       //
@@ -106,7 +106,7 @@ void doProcessing(void)
   
   if(isFileOpen)
   {
-       Serial.printf("."); if(!(procCount%64)) Serial.println("");
+       SERIAL.printf("."); if(!(procCount%64)) SERIAL.println("");SERIAL.flush();
        // fill buffer
        for(int ii=0;ii<BUFFSIZE;ii++) buffer[ii]='0'+(procCount%10);
        //write data to file 

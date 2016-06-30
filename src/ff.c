@@ -871,7 +871,6 @@ FRESULT sync_window (	/* Returns FR_OK or FR_DISK_ERROR */
 			if (wsect - fs->fatbase < fs->fsize) {		/* Is it in the FAT area? */
 				for (nf = fs->n_fats; nf >= 2; nf--) {	/* Reflect the change to all FAT copies */
 					wsect += fs->fsize;
-					disk_write(fs->drv, fs->win, wsect, 1);
 				}
 			}
 		}
@@ -1300,7 +1299,6 @@ DWORD create_chain (	/* 0:No free cluster, 1:Internal error, 0xFFFFFFFF:Disk err
 	DWORD cs, ncl, scl;
 	FRESULT res;
 	FATFS *fs = obj->fs;
-
 
 	if (clst == 0) {	/* Create a new chain */
 		scl = fs->last_clst;				/* Get suggested cluster to start at */
@@ -3471,8 +3469,6 @@ FRESULT f_read (
 
 	LEAVE_FF(fs, FR_OK);
 }
-
-
 
 
 #if !_FS_READONLY
