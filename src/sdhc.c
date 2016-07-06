@@ -1146,7 +1146,6 @@ static DRESULT SDHC_CMD12_StopTransferWaitForBusy(void)
 static DRESULT SDHC_CMD13_SendStatus(void)
 {
 	LWord xfertyp;
-  DRESULT result;
   
   	// Clear Command Complete bit
 	SDHC_IRQSTAT = 0xFFFFFFFF;
