@@ -604,7 +604,7 @@ static DRESULT SDHC_SetBaudrate(uint32_t kbaudrate)
      uint32_t aux=F_CPU;
      uint32_t ii,jj;
      uint32_t baudrate=kbaudrate*1000;
-     for(ii=0;ii<8;ii++)
+     for(ii=1;ii<8;ii++)
      {  for(jj=0;jj<16;jj++)  if((aux/((1<<ii)*(jj+1))) <= baudrate) break;
         if(jj<16) break;
      }
