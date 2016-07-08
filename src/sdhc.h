@@ -140,7 +140,8 @@ void SDHC_ClearDMAStatus(void);
 DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count);
 DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count);
 //
-DSTATUS SDHC_CardIsReady(void);
+DSTATUS SDHC_isReady(void);
+void SDHC_enableCB(uint16_t enCB);
 #ifdef __cplusplus
 }
 #endif

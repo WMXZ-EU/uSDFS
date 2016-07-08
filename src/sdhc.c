@@ -5,31 +5,16 @@
 //see also
 //https://community.nxp.com/thread/99202
 
-
 #include "kinetis.h"
-#include "localKinetis.h"
 #include "core_pins.h" // testing only
 
 #include "sdhc.h"
 #include "sdhc_prv.h"
 
-/* some aux functions for pure c code */
-#include "usb_serial.h"
-void logg(char c) {serial_putchar(c); serial_flush();}
-void printb(uint32_t x)
-{ char c;
-  int ii;
-  for(ii=31;ii>=0;ii--)
-  { if(!((ii+1)%4)) serial_putchar(' ');
-    c=(x&1<<ii)?'1':'0'; serial_putchar(c);
-  }
-  serial_putchar('\r');
-  serial_putchar('\n');
-  serial_flush();
-}
-/* end aux functions */
-
 SD_CARD_DESCRIPTOR sdCardDesc;
+
+
+void blink() {static int a=0; digitalWriteFast(13,a); a=1-a;}
 
 /******************************************************************************
 *
@@ -137,7 +122,7 @@ DSTATUS SDHC_Init(void)
     
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA 
   #if SDHC_USE_ISR == 1
-	NVIC_SET_PRIORITY(IRQ_SDHC, 6*16); //4*64 is Serial
+	NVIC_SET_PRIORITY(IRQ_SDHC, 7*16); //4*64 is Serial
     NVIC_ENABLE_IRQ(IRQ_SDHC);
     SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN_MASK;
   #endif
@@ -210,6 +195,15 @@ DSTATUS SDHC_isReady(void)
 	return result;
 }
 
+extern void sdhc_dmaCB(void * s, void * d) __attribute__ ((weak));
+//
+uint16_t m_sdhc_enCB = 0;
+
+void SDHC_enableCB(uint16_t enCB)
+{ m_sdhc_enCB = enCB;
+}
+
+
 //-----------------------------------------------------------------------------
 // FUNCTION:    SDHC_ISR
 // SCOPE:       SDHC Controller public related function
@@ -233,6 +227,8 @@ void sdhc_isr(void)
     SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN_MASK;
     m_sdhc_dma_status=1;
 	__enable_irq();
+	//
+	if(m_sdhc_enCB) sdhc_dmaCB(0,0);
 
 }
 
