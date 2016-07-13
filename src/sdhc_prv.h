@@ -41,7 +41,7 @@
 * Private variables
 ******************************************************************************/
 uint32_t m_sdhc_baudrate;
-volatile uint32_t m_sdhc_dma_status;
+uint32_t m_sdhc_dma_status;
 
 /******************************************************************************
 * Private functions

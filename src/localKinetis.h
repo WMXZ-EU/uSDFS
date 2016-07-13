@@ -3,32 +3,8 @@
 //
 #define MPU_CESR_VLD_MASK 0x1u
 
-#undef SDHC_DSADDR_DSADDR_MASK  
-#undef SDHC_SYSCTL_DTOCV
-#undef SDHC_BLKATTR_BLKCNT_MASK
-#undef SDHC_BLKATTR_BLKSIZ
-#undef SDHC_BLKATTR_BLKCNT
-#undef SDHC_XFERTYP_RSPTYP
-#undef SDHC_XFERTYP_CMDTYP
-#undef SDHC_BLKATTR_BLKSIZE
-#undef SDHC_XFERTYP_CMDINX
-#undef SDHC_PROCTL_DTW
-#undef SDHC_PROCTL_EMODE
-#undef SDHC_PROCTL_DMAS
-#undef SDHC_WML_RDWM
-#undef SDHC_WML_RDWML
-#undef SDHC_WML_WRWML
-#undef SDHC_ADMAES_ADMAES_MASK
-#undef SDHC_VENDOR_INTSTVAL_MASK
-#undef SDHC_VENDOR_INTSTVAL_MASK
-#undef SDHC_MMCBOOT_DTOCVACK
-#undef SDHC_MMCBOOT_DTOCVACK
-#undef SDHC_MMCBOOT_BOOTBLKCNT
-
-
- 
 /* DSADDR Bit Fields */
-#define SDHC_DSADDR_DSADDR_MASK                  0xFFFFFFFCu
+//#define SDHC_DSADDR_DSADDR_MASK                  0xFFFFFFFCu
 #define SDHC_DSADDR_DSADDR_SHIFT                 2
 #define SDHC_DSADDR_DSADDR(x)                    (((uint32_t)(((uint32_t)(x))<<SDHC_DSADDR_DSADDR_SHIFT))&SDHC_DSADDR_DSADDR_MASK)
 /* BLKATTR Bit Fields */
@@ -114,7 +90,7 @@
 #define SDHC_PRSSTAT_CINS_SHIFT                  16
 #define SDHC_PRSSTAT_CLSL_MASK                   0x800000u
 #define SDHC_PRSSTAT_CLSL_SHIFT                  23
-//#define SDHC_PRSSTAT_DLSL_MASK                   0xFF000000u
+#define SDHC_PRSSTAT_DLSL_MASK                   0xFF000000u
 #define SDHC_PRSSTAT_DLSL_SHIFT                  24
 #define SDHC_PRSSTAT_DLSL(x)                     (((uint32_t)(((uint32_t)(x))<<SDHC_PRSSTAT_DLSL_SHIFT))&SDHC_PRSSTAT_DLSL_MASK)
 /* PROCTL Bit Fields */
@@ -160,10 +136,10 @@
 #define SDHC_SYSCTL_SDCLKEN_SHIFT                3
 #define SDHC_SYSCTL_DVS_MASK                     0xF0u
 #define SDHC_SYSCTL_DVS_SHIFT                    4
-//#define SDHC_SYSCTL_DVS(x)                       (((uint32_t)(((uint32_t)(x))<<SDHC_SYSCTL_DVS_SHIFT))&SDHC_SYSCTL_DVS_MASK)
+#define SDHC_SYSCTL_DVS(x)                       (((uint32_t)(((uint32_t)(x))<<SDHC_SYSCTL_DVS_SHIFT))&SDHC_SYSCTL_DVS_MASK)
 #define SDHC_SYSCTL_SDCLKFS_MASK                 0xFF00u
 #define SDHC_SYSCTL_SDCLKFS_SHIFT                8
-//#define SDHC_SYSCTL_SDCLKFS(x)                   (((uint32_t)(((uint32_t)(x))<<SDHC_SYSCTL_SDCLKFS_SHIFT))&SDHC_SYSCTL_SDCLKFS_MASK)
+#define SDHC_SYSCTL_SDCLKFS(x)                   (((uint32_t)(((uint32_t)(x))<<SDHC_SYSCTL_SDCLKFS_SHIFT))&SDHC_SYSCTL_SDCLKFS_MASK)
 #define SDHC_SYSCTL_DTOCV_MASK                   0xF0000u
 #define SDHC_SYSCTL_DTOCV_SHIFT                  16
 #define SDHC_SYSCTL_DTOCV(x)                     (((uint32_t)(((uint32_t)(x))<<SDHC_SYSCTL_DTOCV_SHIFT))&SDHC_SYSCTL_DTOCV_MASK)
