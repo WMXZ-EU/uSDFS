@@ -11,6 +11,7 @@
 #include <tchar.h>
 typedef unsigned __int64 QWORD;
 
+
 #else			/* Embedded platform */
 
 /* These types MUST be 16-bit or 32-bit */
@@ -18,9 +19,6 @@ typedef int				INT;
 typedef unsigned int	UINT;
 
 /* This type MUST be 8-bit */
-typedef char      CHAR;
-typedef unsigned char  UCHAR;
-#undef BYTE // Arduino defines this to 0
 typedef unsigned char	BYTE;
 
 /* These types MUST be 16-bit */
@@ -29,15 +27,8 @@ typedef unsigned short	WORD;
 typedef unsigned short	WCHAR;
 
 /* These types MUST be 32-bit */
-#ifdef OS16BIT
-typedef long      LONG;
-typedef unsigned long ULONG;
-typedef unsigned long DWORD;
-#else
-typedef int      LONG;
-typedef unsigned int ULONG;
-typedef unsigned int DWORD;
-#endif
+typedef long			LONG;
+typedef unsigned long	DWORD;
 
 /* This type MUST be 64-bit (Remove this for C89 compatibility) */
 typedef unsigned long long QWORD;

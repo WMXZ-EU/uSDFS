@@ -25,6 +25,7 @@ typedef signed short    sWord;
 typedef unsigned char   Byte;
 typedef signed char     sByte;
 
+typedef unsigned char UCHAR; // for legacy
 #include "diskio.h"
 
 /******************************************************************************
