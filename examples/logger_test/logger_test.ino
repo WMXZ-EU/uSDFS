@@ -1,9 +1,10 @@
 //Copyright 2016 by Walter Zimmer
 // Version 29-jun-16
 //
+#include <stdio.h>
 #include "ff.h"
 
-#define SERIAL Serial1
+#define SERIALX Serial1
 
 FRESULT rc;        /* Result code */
 FATFS fatfs;      /* File system object */
@@ -21,15 +22,15 @@ uint8_t buffer[BUFFSIZE] __attribute__( ( aligned ( 16 ) ) );
 UINT wr;
 
 /* Stop with dying message */
-void die( FRESULT rc) { SERIAL.printf("Failed with rc=%u.\n", rc); for (;;) ; }
+void die( FRESULT rc) { SERIALX.printf("Failed with rc=%u.\n", rc); for (;;) ; }
 
 void setup()
 {
-  while(!SERIAL);
-  SERIAL.begin(115200,SERIAL_8N1_RXINV_TXINV);
-  SERIAL.println("\nLogger_test");
+  while(!SERIALX);
+  SERIALX.begin(115200,SERIAL_8N1_RXINV_TXINV);
+  SERIALX.println("\nLogger_test");
   
-  f_mount (&fatfs, "/", 0);      /* Mount/Unmount a logical drive */
+  f_mount (&fatfs, (TCHAR *)L"/", 0);      /* Mount/Unmount a logical drive */
 
   timer_init();
   timer_start();
@@ -70,13 +71,25 @@ uint32_t procCount=0;
 uint32_t ifn=0;
 uint32_t isFileOpen=0;
 char filename[80];
+TCHAR wfilename[80];
 
+TCHAR * char2tchar( char * charString, size_t nn, TCHAR * tcharString)
+{ int ii;
+  for(ii = 0; ii<nn; ii++) tcharString[ii] = (TCHAR) charString[ii];
+  return tcharString;
+}
+
+char * char2tchar(  TCHAR * tcharString, size_t nn, char * charString)
+{ int ii;
+  for(ii = 0; ii<nn; ii++) charString[ii] = (char) tcharString[ii];
+  return charString;
+}
 
 void doProcessing(void)
 {	//
   if(isProcessing)
   {
-    SERIAL.printf("-");
+    SERIALX.printf("-");
     return;  
   }
   isProcessing=1;
@@ -96,8 +109,9 @@ void doProcessing(void)
     {
       // open new file
       sprintf(filename,"t_%05d.dat",ifn++);
-      SERIAL.println(filename);SERIAL.flush();
-      rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS);
+      SERIALX.println(filename);SERIALX.flush();
+      char2tchar(filename,80,wfilename);
+      rc = f_open(&fil, wfilename, FA_WRITE | FA_CREATE_ALWAYS);
       if (rc) die(rc);
       //
       isFileOpen=1;
@@ -106,7 +120,7 @@ void doProcessing(void)
   
   if(isFileOpen)
   {
-       SERIAL.printf("."); if(!(procCount%64)) SERIAL.println("");SERIAL.flush();
+       SERIALX.printf("."); if(!(procCount%64)) SERIALX.println();SERIALX.flush();
        // fill buffer
        for(int ii=0;ii<BUFFSIZE;ii++) buffer[ii]='0'+(procCount%10);
        //write data to file 
