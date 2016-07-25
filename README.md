@@ -14,6 +14,12 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	*First release V1.0.0
 		*multi-buffer operation fixed
 	
+<<<<<<< HEAD
 ###- 08-july-2016
 	*Working release
+=======
+###- 13-jul-2016
+	*corrected unicode char width (is 32 bit not 16 bit)
+
+>>>>>>> origin/master
 
