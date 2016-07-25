@@ -1,7 +1,6 @@
 //Copyright 2016 by Walter Zimmer
 // Version 29-jun-16
 //
-#include <stdio.h>
 #include "ff.h"
 
 #define SERIALX Serial1
