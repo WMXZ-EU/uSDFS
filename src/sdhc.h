@@ -13,9 +13,6 @@
 ******************************************************************************/
 
 #include "kinetis.h"
-#ifndef SDHC_DSADDR_DSADDR_MASK 
-#include "localKinetis.h"
-#endif
 
 // type definitions for 'original' sdhc.c 
 typedef unsigned int   LWord;

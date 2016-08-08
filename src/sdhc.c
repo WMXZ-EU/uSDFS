@@ -7,8 +7,24 @@
 
 
 #include "kinetis.h"
-#include "localKinetis.h"
 #include "core_pins.h" // testing only
+
+// Missing in Teensyduino 1.29
+#ifndef MPU_CESR_VLD_MASK
+#define MPU_CESR_VLD_MASK         0x1u
+#endif
+#ifndef SDHC_PROCTL_DTW_MASK
+#define SDHC_PROCTL_DTW_MASK      0x6u
+#endif
+#ifndef SDHC_SYSCTL_DVS_MASK
+#define SDHC_SYSCTL_DVS_MASK      0xF0u
+#endif
+#ifndef SDHC_SYSCTL_SDCLKFS_MASK
+#define SDHC_SYSCTL_SDCLKFS_MASK  0xFF00u
+#endif
+#ifndef SDHC_SYSCTL_DTOCV_MASK
+#define SDHC_SYSCTL_DTOCV_MASK    0xF0000u
+#endif
 
 #include "sdhc.h"
 #include "sdhc_prv.h"
@@ -108,50 +124,50 @@ DSTATUS SDHC_Init(void)
     SDHC_InitGPIO(0);
     
     /* Reset SDHC */
-    SDHC_SYSCTL = SDHC_SYSCTL_RSTA_MASK | SDHC_SYSCTL_SDCLKFS(0x80);
-    while (SDHC_SYSCTL & SDHC_SYSCTL_RSTA_MASK)
+    SDHC_SYSCTL = SDHC_SYSCTL_RSTA | SDHC_SYSCTL_SDCLKFS(0x80);
+    while (SDHC_SYSCTL & SDHC_SYSCTL_RSTA)
     { };
     
     /* Initial values */ // to do - Check values
     SDHC_VENDOR = 0;
     SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(1) | SDHC_BLKATTR_BLKSIZE(SDHC_BLOCK_SIZE);
-    SDHC_PROCTL = SDHC_PROCTL_EMODE(SDHC_PROCTL_EMODE_INVARIANT) | SDHC_PROCTL_D3CD_MASK; 
+    SDHC_PROCTL = SDHC_PROCTL_EMODE(SDHC_PROCTL_EMODE_INVARIANT) | SDHC_PROCTL_D3CD;
     SDHC_WML = SDHC_WML_RDWML(SDHC_FIFO_BUFFER_SIZE) | SDHC_WML_WRWML(SDHC_FIFO_BUFFER_SIZE);
 
     /* Set the SDHC initial baud rate divider and start */
     SDHC_SetBaudrate(400);
 
     /* Poll inhibit bits */
-    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB_MASK | SDHC_PRSSTAT_CDIHB_MASK)) { };
+    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB)) { };
 
     /* Init GPIO again */
     SDHC_InitGPIO(0xFFFF);
     
     /* Enable requests */
     SDHC_IRQSTAT = 0xFFFF;
-    SDHC_IRQSTATEN = SDHC_IRQSTATEN_DMAESEN_MASK | SDHC_IRQSTATEN_AC12ESEN_MASK | SDHC_IRQSTATEN_DEBESEN_MASK | SDHC_IRQSTATEN_DCESEN_MASK | SDHC_IRQSTATEN_DTOESEN_MASK 
-                         | SDHC_IRQSTATEN_CIESEN_MASK | SDHC_IRQSTATEN_CEBESEN_MASK | SDHC_IRQSTATEN_CCESEN_MASK | SDHC_IRQSTATEN_CTOESEN_MASK 
-                         | SDHC_IRQSTATEN_BRRSEN_MASK | SDHC_IRQSTATEN_BWRSEN_MASK | SDHC_IRQSTATEN_DINTSEN_MASK | SDHC_IRQSTATEN_CRMSEN_MASK
-                         | SDHC_IRQSTATEN_TCSEN_MASK | SDHC_IRQSTATEN_CCSEN_MASK;
+    SDHC_IRQSTATEN = SDHC_IRQSTATEN_DMAESEN | SDHC_IRQSTATEN_AC12ESEN | SDHC_IRQSTATEN_DEBESEN | SDHC_IRQSTATEN_DCESEN | SDHC_IRQSTATEN_DTOESEN 
+                         | SDHC_IRQSTATEN_CIESEN | SDHC_IRQSTATEN_CEBESEN | SDHC_IRQSTATEN_CCESEN | SDHC_IRQSTATEN_CTOESEN 
+                         | SDHC_IRQSTATEN_BRRSEN | SDHC_IRQSTATEN_BWRSEN | SDHC_IRQSTATEN_DINTSEN | SDHC_IRQSTATEN_CRMSEN
+                         | SDHC_IRQSTATEN_TCSEN | SDHC_IRQSTATEN_CCSEN;
     
     
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA 
   #if SDHC_USE_ISR == 1
 	NVIC_SET_PRIORITY(IRQ_SDHC, 6*16); //4*64 is Serial
     NVIC_ENABLE_IRQ(IRQ_SDHC);
-    SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN_MASK;
+    SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN;
   #endif
 #endif
 
     /* 80 initial clocks */
-    SDHC_SYSCTL |= SDHC_SYSCTL_INITA_MASK;
-    while (SDHC_SYSCTL & SDHC_SYSCTL_INITA_MASK) { };
+    SDHC_SYSCTL |= SDHC_SYSCTL_INITA;
+    while (SDHC_SYSCTL & SDHC_SYSCTL_INITA) { };
 
     // to do - check if this needed
-    SDHC_IRQSTAT |= SDHC_IRQSTAT_CRM_MASK;
+    SDHC_IRQSTAT |= SDHC_IRQSTAT_CRM;
     
     // Check card
-    if (SDHC_PRSSTAT & SDHC_PRSSTAT_CINS_MASK)
+    if (SDHC_PRSSTAT & SDHC_PRSSTAT_CINS)
       return 0;
     else
       return STA_NODISK;
@@ -221,19 +237,18 @@ DSTATUS SDHC_isReady(void)
 //-----------------------------------------------------------------------------  
 void sdhc_isr(void)
 {	
-	while(!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC_MASK)) ;	// wait for transfer to complete
+	while(!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC)) ;	// wait for transfer to complete
 	__disable_irq();
-   SDHC_IRQSIGEN = 0x00000000; // Disable Interrupt 
-	if(SDHC_IRQSTAT & SDHC_IRQSTAT_BRR_MASK)	SDHC_IRQSTAT = SDHC_IRQSTAT_BRR_MASK;
-	if(SDHC_IRQSTAT & SDHC_IRQSTAT_BWR_MASK)	SDHC_IRQSTAT = SDHC_IRQSTAT_BWR_MASK;
-	if(SDHC_IRQSTAT & SDHC_IRQSTAT_DINT_MASK)	SDHC_IRQSTAT = SDHC_IRQSTAT_DINT_MASK;
-	if(SDHC_IRQSTAT & SDHC_IRQSTAT_TC_MASK)		SDHC_IRQSTAT = SDHC_IRQSTAT_TC_MASK;
-	if(SDHC_IRQSTAT & SDHC_IRQSTAT_CC_MASK)		SDHC_IRQSTAT = SDHC_IRQSTAT_CC_MASK;
+	SDHC_IRQSIGEN = 0x00000000; // Disable Interrupt
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_BRR)		SDHC_IRQSTAT = SDHC_IRQSTAT_BRR;
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_BWR)		SDHC_IRQSTAT = SDHC_IRQSTAT_BWR;
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_DINT)		SDHC_IRQSTAT = SDHC_IRQSTAT_DINT;
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_TC)		SDHC_IRQSTAT = SDHC_IRQSTAT_TC;
+	if(SDHC_IRQSTAT & SDHC_IRQSTAT_CC)		SDHC_IRQSTAT = SDHC_IRQSTAT_CC;
 
-    SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN_MASK;
-    m_sdhc_dma_status=1;
+	SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN;
+	m_sdhc_dma_status=1;
 	__enable_irq();
-
 }
 
 //-----------------------------------------------------------------------------
@@ -435,8 +450,8 @@ DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count)
   SDHC_IRQSTAT = 0xffff;
  
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
-  while(SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK) {};
-  SDHC_IRQSTAT |= SDHC_IRQSTAT_TC_MASK;
+  while(SDHC_PRSSTAT & SDHC_PRSSTAT_DLA) {};
+  SDHC_IRQSTAT |= SDHC_IRQSTAT_TC;
   SDHC_DSADDR  = (LWord)pData;  
 #endif  
 	 m_sdhc_dma_status=0;
@@ -474,8 +489,8 @@ DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count)
   }
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_SWPOLL
   // finish up 
-	while (!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC_MASK)) { }  // wait for transfer to complete
-    SDHC_IRQSTAT = (SDHC_IRQSTAT_TC_MASK | SDHC_IRQSTAT_BRR_MASK | SDHC_IRQSTAT_AC12E_MASK);
+	while (!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC)) { }  // wait for transfer to complete
+    SDHC_IRQSTAT = (SDHC_IRQSTAT_TC | SDHC_IRQSTAT_BRR | SDHC_IRQSTAT_AC12E);
 #endif
   
   return result; 
@@ -512,8 +527,8 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
   SDHC_IRQSTAT = 0xffff;
     
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
-  while(SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK) {};
-  SDHC_IRQSTAT |= SDHC_IRQSTAT_TC_MASK;
+  while(SDHC_PRSSTAT & SDHC_PRSSTAT_DLA) {};
+  SDHC_IRQSTAT |= SDHC_IRQSTAT_TC;
   SDHC_DSADDR  = (LWord)pData;  
 #endif   
 	 m_sdhc_dma_status=0;
@@ -552,8 +567,8 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
   }
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_SWPOLL
   // finish up 
-	while (!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC_MASK)) { }  // wait for transfer to complete
-    SDHC_IRQSTAT = (SDHC_IRQSTAT_TC_MASK | SDHC_IRQSTAT_BWR_MASK | SDHC_IRQSTAT_AC12E_MASK);
+	while (!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC)) { }  // wait for transfer to complete
+    SDHC_IRQSTAT = (SDHC_IRQSTAT_TC | SDHC_IRQSTAT_BWR | SDHC_IRQSTAT_AC12E);
 #endif
   
   return result;
@@ -598,7 +613,7 @@ static DRESULT SDHC_SetBaudrate(uint32_t kbaudrate)
   LWord sysctl, time_out;
   
   // Disable SDHC clocks
-  SDHC_SYSCTL &= (~ SDHC_SYSCTL_SDCLKEN_MASK);
+  SDHC_SYSCTL &= (~ SDHC_SYSCTL_SDCLKEN);
 
      // get dividers from requested baud rate 
      uint32_t aux=F_CPU;
@@ -620,14 +635,14 @@ static DRESULT SDHC_SetBaudrate(uint32_t kbaudrate)
   time_out = 0xfffff;
   
   /* Wait for stable clock */
-  while ((0 == (SDHC_PRSSTAT & SDHC_PRSSTAT_SDSTB_MASK)) && time_out)
+  while ((0 == (SDHC_PRSSTAT & SDHC_PRSSTAT_SDSTB)) && time_out)
   {
     time_out--;
   };
   
   /* Enable SDHC clocks */
-  SDHC_SYSCTL |= SDHC_SYSCTL_SDCLKEN_MASK;
-  SDHC_IRQSTAT |= SDHC_IRQSTAT_DTOE_MASK;
+  SDHC_SYSCTL |= SDHC_SYSCTL_SDCLKEN;
+  SDHC_IRQSTAT |= SDHC_IRQSTAT_DTOE;
   
   if(time_out)
     return RES_OK;
@@ -679,13 +694,13 @@ static DRESULT SDHC_ReadBlock(LWord* pData)
   // loop count ((block_count * block_size) / (int_size * fifo_size))
   i_max = ((1 * SDHC_BLOCK_SIZE) / (4 * SDHC_FIFO_BUFFER_SIZE));
   
-  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1) {};
+  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA)==1) {}; // TODO, does this ever wait?
   
   for(i = 0; i < i_max; i++)
   {
-    SDHC_IRQSTAT |= SDHC_IRQSTAT_BRR_MASK;
+    SDHC_IRQSTAT |= SDHC_IRQSTAT_BRR;
     
-    if (SDHC_IRQSTAT & (SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK))
+    if (SDHC_IRQSTAT & (SDHC_IRQSTAT_DEBE | SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE))
     {
         SDHC_IRQSTAT |= SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_BRR_MASK;
 		//
@@ -699,10 +714,10 @@ static DRESULT SDHC_ReadBlock(LWord* pData)
       *pData++ = SDHC_DATPORT;
   }
 
-//  while (!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC_MASK)) {                          // wait for transfer to complete
+//  while (!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC)) {                          // wait for transfer to complete
 //    }
 	
-//  SDHC_IRQSTAT = (SDHC_IRQSTAT_TC_MASK | SDHC_IRQSTAT_BRR_MASK | SDHC_IRQSTAT_AC12E_MASK);
+//  SDHC_IRQSTAT = (SDHC_IRQSTAT_TC | SDHC_IRQSTAT_BRR | SDHC_IRQSTAT_AC12E);
    return RES_OK;
 
 //--------------------------------------------
@@ -713,18 +728,18 @@ static DRESULT SDHC_ReadBlock(LWord* pData)
     return RES_OK;
 
   #else
-	  if (SDHC_WaitStatus(	SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK |
-							SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK |
-							SDHC_IRQSTAT_DINT_MASK |SDHC_IRQSTAT_TC_MASK) 
-							& (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK))
+	  if (SDHC_WaitStatus(	SDHC_IRQSTAT_DMAE | SDHC_IRQSTAT_AC12E | SDHC_IRQSTAT_DEBE |
+							SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE |
+							SDHC_IRQSTAT_DINT |SDHC_IRQSTAT_TC)
+							& (SDHC_IRQSTAT_DINT | SDHC_IRQSTAT_TC))
 	  { 
-		 SDHC_IRQSTAT |= (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK);
+		 SDHC_IRQSTAT |= (SDHC_IRQSTAT_DINT | SDHC_IRQSTAT_TC);
 		 m_sdhc_dma_status=1;
 		 return RES_OK;
 	  }
 	  
 	  {
-		  SDHC_IRQSTAT |= SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK;
+		  SDHC_IRQSTAT |= SDHC_IRQSTAT_DMAE | SDHC_IRQSTAT_AC12E | SDHC_IRQSTAT_DEBE | SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE | SDHC_IRQSTAT_DINT;
 		  (void)SDHC_CMD12_StopTransferWaitForBusy();
 		 m_sdhc_dma_status=-1;
 		  return RES_ERROR;
@@ -753,11 +768,11 @@ static DRESULT SDHC_WriteBlock(const LWord* pData)
 
   for(i = 0; i < i_max; i++)
   { 
-    while (0 == (SDHC_IRQSTAT & SDHC_IRQSTAT_BWR_MASK)) { }; 
+    while (0 == (SDHC_IRQSTAT & SDHC_IRQSTAT_BWR)) { }; 
    
-    if (SDHC_IRQSTAT & (SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK))
+    if (SDHC_IRQSTAT & (SDHC_IRQSTAT_DEBE | SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE))
     {
-        SDHC_IRQSTAT |= SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_BWR_MASK;
+        SDHC_IRQSTAT |= SDHC_IRQSTAT_DEBE | SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE | SDHC_IRQSTAT_BWR;
         
         (void)SDHC_CMD12_StopTransferWaitForBusy();
         return RES_ERROR;
@@ -766,11 +781,11 @@ static DRESULT SDHC_WriteBlock(const LWord* pData)
     for(j=0;j<SDHC_FIFO_BUFFER_SIZE;j++)
       SDHC_DATPORT = *pData++;
     
-    SDHC_IRQSTAT |= SDHC_IRQSTAT_BWR_MASK;
+    SDHC_IRQSTAT |= SDHC_IRQSTAT_BWR;
     
-    if (SDHC_IRQSTAT & (SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK))
+    if (SDHC_IRQSTAT & (SDHC_IRQSTAT_DEBE | SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE))
     {
-        SDHC_IRQSTAT |= SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_BWR_MASK;
+        SDHC_IRQSTAT |= SDHC_IRQSTAT_DEBE | SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE | SDHC_IRQSTAT_BWR;
         
         (void)SDHC_CMD12_StopTransferWaitForBusy();
         return RES_ERROR;
@@ -786,18 +801,18 @@ static DRESULT SDHC_WriteBlock(const LWord* pData)
     return RES_OK; // nothing to wait (will be done in ISR)
 
   #else
-	  if (SDHC_WaitStatus(	SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK |
-							SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | 
-							SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK) 
-							& (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK))
+	  if (SDHC_WaitStatus(SDHC_IRQSTAT_DMAE | SDHC_IRQSTAT_AC12E | SDHC_IRQSTAT_DEBE |
+							SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE | 
+							SDHC_IRQSTAT_DINT | SDHC_IRQSTAT_TC) 
+							& (SDHC_IRQSTAT_DINT | SDHC_IRQSTAT_TC))
 	  {
-		 SDHC_IRQSTAT |= (SDHC_IRQSTAT_DINT_MASK | SDHC_IRQSTAT_TC_MASK);
+		 SDHC_IRQSTAT |= (SDHC_IRQSTAT_DINT | SDHC_IRQSTAT_TC);
 		 m_sdhc_dma_status=1;
 		 return RES_OK;
 	  }
 	  
 	  {
-		  SDHC_IRQSTAT |= SDHC_IRQSTAT_DMAE_MASK | SDHC_IRQSTAT_AC12E_MASK | SDHC_IRQSTAT_DEBE_MASK | SDHC_IRQSTAT_DCE_MASK | SDHC_IRQSTAT_DTOE_MASK | SDHC_IRQSTAT_DINT_MASK;
+		  SDHC_IRQSTAT |= SDHC_IRQSTAT_DMAE | SDHC_IRQSTAT_AC12E | SDHC_IRQSTAT_DEBE | SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE | SDHC_IRQSTAT_DINT;
 		  (void)SDHC_CMD12_StopTransferWaitForBusy();
 		 m_sdhc_dma_status=-1;
 		  return RES_ERROR;
@@ -819,36 +834,36 @@ static DRESULT SDHC_CMD_Do(LWord xfertyp)
 {
 
     // Card removal check preparation
-    SDHC_IRQSTAT |= SDHC_IRQSTAT_CRM_MASK;
+    SDHC_IRQSTAT |= SDHC_IRQSTAT_CRM;
 
     // Wait for cmd line idle // to do timeout PRSSTAT[CDIHB] and the PRSSTAT[CIHB]
-    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK))
+    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB))
         { };
 
     SDHC_XFERTYP = xfertyp;
 
     /* Wait for response */
-    if (SDHC_WaitStatus(SDHC_IRQSTAT_CIE_MASK | SDHC_IRQSTAT_CEBE_MASK | SDHC_IRQSTAT_CCE_MASK | SDHC_IRQSTAT_CC_MASK) != SDHC_IRQSTAT_CC_MASK)
-    {   SDHC_IRQSTAT |= SDHC_IRQSTAT_CTOE_MASK | SDHC_IRQSTAT_CIE_MASK | SDHC_IRQSTAT_CEBE_MASK | 
-						SDHC_IRQSTAT_CCE_MASK | SDHC_IRQSTAT_CC_MASK;
+    if (SDHC_WaitStatus(SDHC_IRQSTAT_CIE | SDHC_IRQSTAT_CEBE | SDHC_IRQSTAT_CCE | SDHC_IRQSTAT_CC) != SDHC_IRQSTAT_CC)
+    {   SDHC_IRQSTAT |= SDHC_IRQSTAT_CTOE | SDHC_IRQSTAT_CIE | SDHC_IRQSTAT_CEBE | 
+						SDHC_IRQSTAT_CCE | SDHC_IRQSTAT_CC;
         return RES_ERROR;
     }
 	
     /* Check card removal */
-    if (SDHC_IRQSTAT & SDHC_IRQSTAT_CRM_MASK)
+    if (SDHC_IRQSTAT & SDHC_IRQSTAT_CRM)
     {
-        SDHC_IRQSTAT |= SDHC_IRQSTAT_CTOE_MASK | SDHC_IRQSTAT_CC_MASK;
+        SDHC_IRQSTAT |= SDHC_IRQSTAT_CTOE | SDHC_IRQSTAT_CC;
         return RES_NOTRDY;
     }
 
     /* Get response, if available */
-    if (SDHC_IRQSTAT & SDHC_IRQSTAT_CTOE_MASK)
+    if (SDHC_IRQSTAT & SDHC_IRQSTAT_CTOE)
     {
-        SDHC_IRQSTAT |= SDHC_IRQSTAT_CTOE_MASK | SDHC_IRQSTAT_CC_MASK;
+        SDHC_IRQSTAT |= SDHC_IRQSTAT_CTOE | SDHC_IRQSTAT_CC;
         return RES_NONRSPNS;
     }
     
-    SDHC_IRQSTAT |= SDHC_IRQSTAT_CC_MASK;
+    SDHC_IRQSTAT |= SDHC_IRQSTAT_CC;
 
     return RES_OK;
 
@@ -899,7 +914,7 @@ static DRESULT SDHC_CMD2_Identify(void)
   
   SDHC_CMDARG = 0;
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD2) | SDHC_XFERTYP_CCCEN_MASK | 
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD2) | SDHC_XFERTYP_CCCEN | 
              SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_136));                   
                    
   result = SDHC_CMD_Do(xfertyp);
@@ -929,8 +944,8 @@ static DRESULT SDHC_CMD3_GetAddress(void)
   
   SDHC_CMDARG = 0;
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD3) | SDHC_XFERTYP_CICEN_MASK | 
-             SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));                   
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD3) | SDHC_XFERTYP_CICEN |
+             SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));
                    
   result = SDHC_CMD_Do(xfertyp);
     
@@ -959,8 +974,8 @@ static DRESULT SDHC_ACMD6_SetBusWidth(LWord address, LWord width)
   
   SDHC_CMDARG = address; 
   // first send CMD 55 Application specific command
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD55) | SDHC_XFERTYP_CICEN_MASK | 
-             SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));                   
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD55) | SDHC_XFERTYP_CICEN |
+             SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));
   
   result = SDHC_CMD_Do(xfertyp);
   
@@ -974,8 +989,8 @@ static DRESULT SDHC_ACMD6_SetBusWidth(LWord address, LWord width)
   SDHC_CMDARG = width;
   
   // Send 6CMD
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD6) | SDHC_XFERTYP_CICEN_MASK | 
-             SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));                   
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD6) | SDHC_XFERTYP_CICEN |
+             SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));
                    
   result = SDHC_CMD_Do(xfertyp);
     
@@ -1004,8 +1019,8 @@ static DRESULT SDHC_CMD7_SelectCard(LWord address)
   
   SDHC_CMDARG = address; 
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD7) | SDHC_XFERTYP_CICEN_MASK | 
-             SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48BUSY));                   
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD7) | SDHC_XFERTYP_CICEN |
+             SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48BUSY));
                    
   result = SDHC_CMD_Do(xfertyp);
     
@@ -1034,8 +1049,8 @@ static DRESULT SDHC_CMD8_SetInterface(LWord cond)
   
   SDHC_CMDARG = cond; 
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD8) | SDHC_XFERTYP_CICEN_MASK | 
-             SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));                   
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD8) | SDHC_XFERTYP_CICEN |
+             SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));
                    
   result = SDHC_CMD_Do(xfertyp);
     
@@ -1064,7 +1079,7 @@ static DRESULT SDHC_CMD9_GetParameters(LWord address)
   
   SDHC_CMDARG = address; 
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD9) | SDHC_XFERTYP_CCCEN_MASK | 
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD9) | SDHC_XFERTYP_CCCEN | 
              SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_136));                   
                    
   result = SDHC_CMD_Do(xfertyp);
@@ -1095,7 +1110,7 @@ static DRESULT SDHC_CMD12_StopTransfer(void)
   
   SDHC_CMDARG = 0;
   xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD12) | SDHC_XFERTYP_CMDTYP(SDHC_XFERTYP_CMDTYP_ABORT) |
-                 SDHC_XFERTYP_CICEN_MASK | SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48BUSY));
+                 SDHC_XFERTYP_CICEN | SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48BUSY));
   
   result = SDHC_CMD_Do(xfertyp);
   
@@ -1123,7 +1138,7 @@ static DRESULT SDHC_CMD12_StopTransferWaitForBusy(void)
   do{
     result = SDHC_CMD12_StopTransfer();
     timeOut--;
-  }while(timeOut && (SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK) && result == RES_OK);
+  }while(timeOut && (SDHC_PRSSTAT & SDHC_PRSSTAT_DLA) && result == RES_OK);
   
   if(result != RES_OK)
     return result;
@@ -1153,21 +1168,21 @@ static DRESULT SDHC_CMD13_SendStatus(void)
  	//
  	SDHC_CMDARG =  0;
 	xfertyp =  (SDHC_XFERTYP_CMDINX(SDHC_CMD13) | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48)
-					 |SDHC_XFERTYP_CICEN_MASK
- 					 |SDHC_XFERTYP_CCCEN_MASK);
+					 |SDHC_XFERTYP_CICEN
+ 					 |SDHC_XFERTYP_CCCEN);
 					
 	SDHC_XFERTYP = xfertyp;
- 	while ((SDHC_IRQSTAT & SDHC_IRQSTAT_CC_MASK)!=SDHC_IRQSTAT_CC_MASK) ; 
+ 	while ((SDHC_IRQSTAT & SDHC_IRQSTAT_CC)!=SDHC_IRQSTAT_CC) ; 
 	
-	while((SDHC_IRQSTAT & SDHC_IRQSTAT_CTOE_MASK)==SDHC_IRQSTAT_CTOE_MASK)
+	while((SDHC_IRQSTAT & SDHC_IRQSTAT_CTOE)==SDHC_IRQSTAT_CTOE)
 	{
 		SDHC_IRQSTAT = 0xFFFFFFFF;
 
  		//
  		SDHC_CMDARG =  0;
 		xfertyp =  (SDHC_XFERTYP_CMDINX(SDHC_CMD13) | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48)
-						 |SDHC_XFERTYP_CICEN_MASK
-						 |SDHC_XFERTYP_CCCEN_MASK);
+						 |SDHC_XFERTYP_CICEN
+						 |SDHC_XFERTYP_CCCEN);
 						
 		SDHC_XFERTYP = xfertyp;
 	}
@@ -1196,9 +1211,9 @@ static DRESULT SDHC_CMD16_SetBlockSize(LWord block_size)
   
   SDHC_CMDARG = block_size; 
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD16) | SDHC_XFERTYP_CICEN_MASK | 
-             SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));                   
-                   
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD16) | SDHC_XFERTYP_CICEN | 
+             SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));
+
   result = SDHC_CMD_Do(xfertyp);
     
   if(result == RES_OK)
@@ -1224,7 +1239,7 @@ static DRESULT SDHC_CMD17_ReadBlock(LWord sector)
   LWord xfertyp;
   DRESULT result;
   
-//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
+//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA)==1){}; // TODO: can this ever wait?
   
   SDHC_CMDARG = sector;
   
@@ -1232,11 +1247,11 @@ static DRESULT SDHC_CMD17_ReadBlock(LWord sector)
 //  SDHC_BLKATTR |= SDHC_BLKATTR_BLKCNT(1);
   SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(1) | 512;
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD17) | SDHC_XFERTYP_CICEN_MASK | 
-                 SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) | 
-                 SDHC_XFERTYP_DTDSEL_MASK | SDHC_XFERTYP_DPSEL_MASK 
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD17) | SDHC_XFERTYP_CICEN | 
+                 SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) | 
+                 SDHC_XFERTYP_DTDSEL | SDHC_XFERTYP_DPSEL
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA 
-                  | SDHC_XFERTYP_DMAEN_MASK
+                  | SDHC_XFERTYP_DMAEN
 #endif
                   );
   
@@ -1249,7 +1264,7 @@ static DRESULT SDHC_CMD17_ReadBlock(LWord sector)
         (void)SDHC_CMDRSP0;
   }
 #else
-    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK)) { };
+    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB)) { };
 
     SDHC_XFERTYP = xfertyp;
 	
@@ -1274,19 +1289,19 @@ static DRESULT SDHC_CMD18_ReadBlocks(LWord sector, LWord count)
   LWord xfertyp;
   DRESULT result;
   
-//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
+//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA)==1){}; // TODO: can this ever wait?
   
   SDHC_CMDARG = sector;
 //  SDHC_BLKATTR &= ~(SDHC_BLKATTR_BLKCNT_MASK);  
 //  SDHC_BLKATTR |= SDHC_BLKATTR_BLKCNT(count);
   SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(count) | 512;
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD18) | SDHC_XFERTYP_CICEN_MASK | 
-                 SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) | 
-                 SDHC_XFERTYP_DTDSEL_MASK | SDHC_XFERTYP_DPSEL_MASK | 
-                 SDHC_XFERTYP_MSBSEL_MASK | SDHC_XFERTYP_AC12EN_MASK | SDHC_XFERTYP_BCEN_MASK
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD18) | SDHC_XFERTYP_CICEN | 
+                 SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) | 
+                 SDHC_XFERTYP_DTDSEL | SDHC_XFERTYP_DPSEL | 
+                 SDHC_XFERTYP_MSBSEL | SDHC_XFERTYP_AC12EN | SDHC_XFERTYP_BCEN
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA 
-                  | SDHC_XFERTYP_DMAEN_MASK
+                  | SDHC_XFERTYP_DMAEN
 #endif
                   );
 
@@ -1299,7 +1314,7 @@ static DRESULT SDHC_CMD18_ReadBlocks(LWord sector, LWord count)
         (void)SDHC_CMDRSP0;
   }
   #else
-    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK)) { };
+    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB)) { };
 
     SDHC_XFERTYP = xfertyp;
 	
@@ -1323,20 +1338,20 @@ static DRESULT SDHC_CMD24_WriteBlock(LWord sector)
   LWord xfertyp;
   DRESULT result;
 
-//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
+//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA)==1){}; // TODO: can this ever wait?
   
   SDHC_CMDARG = sector;
 //  SDHC_BLKATTR &= ~(SDHC_BLKATTR_BLKCNT_MASK);  
 //  SDHC_BLKATTR |= SDHC_BLKATTR_BLKCNT(1);
   SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(1) | 512;
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD24) | SDHC_XFERTYP_CICEN_MASK | 
-                 SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) | 
-                 SDHC_XFERTYP_DPSEL_MASK
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD24) | SDHC_XFERTYP_CICEN | 
+                 SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) | 
+                 SDHC_XFERTYP_DPSEL
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA 
-                  | SDHC_XFERTYP_DMAEN_MASK
+                  | SDHC_XFERTYP_DMAEN
 #endif
-                  );                   
+                  );
   
   
 #if SDHC_USE_ISR == 0
@@ -1348,7 +1363,7 @@ static DRESULT SDHC_CMD24_WriteBlock(LWord sector)
     (void)SDHC_CMDRSP0;
   }
 #else
-    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK)) { };
+    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB)) { };
 
     SDHC_XFERTYP = xfertyp;
 	
@@ -1373,21 +1388,21 @@ static DRESULT SDHC_CMD25_WriteBlocks(LWord sector, LWord count)
   LWord xfertyp;
   DRESULT result;
  
-//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA_MASK)==1){};
+//  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_DLA)==1){}; // TODO: can this ever wait?
  
   SDHC_CMDARG = sector;
 //  SDHC_BLKATTR &= ~(SDHC_BLKATTR_BLKCNT_MASK);  
 //  SDHC_BLKATTR |= SDHC_BLKATTR_BLKCNT(count);
   SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(count) | 512;
   
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD25) | SDHC_XFERTYP_CICEN_MASK | 
-                 SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) | 
-                 SDHC_XFERTYP_DPSEL_MASK | 
-                 SDHC_XFERTYP_MSBSEL_MASK | SDHC_XFERTYP_AC12EN_MASK | SDHC_XFERTYP_BCEN_MASK
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD25) | SDHC_XFERTYP_CICEN | 
+                 SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) | 
+                 SDHC_XFERTYP_DPSEL | 
+                 SDHC_XFERTYP_MSBSEL | SDHC_XFERTYP_AC12EN | SDHC_XFERTYP_BCEN
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA 
-                  | SDHC_XFERTYP_DMAEN_MASK
+                  | SDHC_XFERTYP_DMAEN
 #endif
-                  );                   
+                  );
 
 #if SDHC_USE_ISR == 0
    result = SDHC_CMD_Do(xfertyp);
@@ -1398,7 +1413,7 @@ static DRESULT SDHC_CMD25_WriteBlocks(LWord sector, LWord count)
         (void)SDHC_CMDRSP0;
   }
 #else
-    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB_MASK) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB_MASK)) { };
+    while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB)) { };
 
     SDHC_XFERTYP = xfertyp;
 	
@@ -1424,8 +1439,8 @@ static DRESULT SDHC_ACMD41_SendOperationCond(LWord cond)
   
   SDHC_CMDARG = 0; 
   // first send CMD 55 Application specific command
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD55) | SDHC_XFERTYP_CICEN_MASK | 
-             SDHC_XFERTYP_CCCEN_MASK | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));                   
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD55) | SDHC_XFERTYP_CICEN | 
+             SDHC_XFERTYP_CCCEN | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));
   
   result = SDHC_CMD_Do(xfertyp);
   
@@ -1439,7 +1454,7 @@ static DRESULT SDHC_ACMD41_SendOperationCond(LWord cond)
   SDHC_CMDARG = cond;
   
   // Send 41CMD
-  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_ACMD41) | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));                   
+  xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_ACMD41) | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));
                    
   result = SDHC_CMD_Do(xfertyp);
     
@@ -1470,23 +1485,23 @@ uint32_t CMD13_SEND_STATUS(uint32_t card_rca)
  	//
  	SDHC_CMDARG =  card_rca;
  	SDHC_XFERTYP =  MMC_CMD13
-					|SDHC_XFERTYP_CICEN_MASK
- 					|SDHC_XFERTYP_CCCEN_MASK;
- 	while ((SDHC_IRQSTAT & SDHC_IRQSTAT_CC_MASK)!=SDHC_IRQSTAT_CC_MASK) ; 
+					|SDHC_XFERTYP_CICEN
+ 					|SDHC_XFERTYP_CCCEN;
+ 	while ((SDHC_IRQSTAT & SDHC_IRQSTAT_CC)!=SDHC_IRQSTAT_CC) ; 
 	
-	while((SDHC_IRQSTAT & SDHC_IRQSTAT_CTOE_MASK)==SDHC_IRQSTAT_CTOE_MASK)
+	while((SDHC_IRQSTAT & SDHC_IRQSTAT_CTOE)==SDHC_IRQSTAT_CTOE)
 	{
 		SDHC_IRQSTAT = 0xFFFFFFFF;
 
  		//
  		SDHC_CMDARG =  card_rca;
  		SDHC_XFERTYP =  MMC_CMD13
-						|SDHC_XFERTYP_CICEN_MASK
- 						|SDHC_XFERTYP_CCCEN_MASK;
+						|SDHC_XFERTYP_CICEN
+ 						|SDHC_XFERTYP_CCCEN;
 	}
 
  	#if (defined(DEBUG_INFO))
- 		if(SDHC_IRQSTAT & SDHC_IRQSTAT_CC_MASK)
+ 		if(SDHC_IRQSTAT & SDHC_IRQSTAT_CC)
  			printf("\tcard status cmd done (13) \n");
  		else 
 			printf("\tcard status cmd timeout \n");
