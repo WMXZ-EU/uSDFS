@@ -1,7 +1,7 @@
 # uSDFS
 uSD File system based on ELM-CHaN generic FAT system
 
-The Teensy library contains a port of ELM_CHaN's generic FAT file system for the K66 MCU 
+The Teensy library contains a port of ELM_CHaN's generic FAT file system for the PJRC Teensy 3.6 K66 MCU 
 
 ##History:
 ###- 26-jun-2016: 
