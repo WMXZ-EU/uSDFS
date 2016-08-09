@@ -14,19 +14,17 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	*First release V1.0.0
 		*multi-buffer operation fixed
 	
-<<<<<<< HEAD
 ###- 08-july-2016
 	*Working release
-=======
 ###- 13-jul-2016
 	*corrected unicode char width (is 32 bit not 16 bit on FRDM K64, not sure for Teensy 3.6)
 
-=======
 ###- 25-jul-2016
 	*upgraded to CHaN's ff12a version as of 25-July
 	*default configuration is now with exFAT
 		* implies use of LFN
 		* requires use of unicode
 
->>>>>>> origin/master
+###- 09-aug-2016
+	* symbols aligned with Teensyduino_1.29
 
