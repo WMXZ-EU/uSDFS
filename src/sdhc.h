@@ -91,17 +91,19 @@ typedef unsigned char UCHAR; // for legacy
 #define SDHC_TRANSFERTYPE_DMA               1
 #define SDHC_TRANSFERTYPE_SWPOLL            2
 
-#define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_DMA
 #define SDHC_FIFO_BUFFER_SIZE               16
 #define SDHC_BLOCK_SIZE                     512
 
+#define SDHC_USE_ISR	                    1	// must always use Interrupts (needed for CMD6)
+
 #define SDHC_DO4BITS                        1	// use 4 bit bus
-#define SDHC_USE_ISR	                    1	// use Interrupts
+#define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_DMA
 
 /******************************************************************************
 * Macros 
 ******************************************************************************/
 
+#define SDHC_ERROR(x,y) {m_sdhc_error = y; sdCardDesc.status = x; return x;}
 
 /******************************************************************************
 * Types
@@ -116,9 +118,56 @@ typedef struct
   LWord   lastCardStatus;
 }SD_CARD_DESCRIPTOR;
 
+typedef enum {
+  SD_CARD_ERROR_NONE = 0,
+
+  // Basic commands and switch command.
+  SD_CARD_ERROR_CMD0 = 0X20,
+  SD_CARD_ERROR_CMD2,
+  SD_CARD_ERROR_CMD3,
+  SD_CARD_ERROR_CMD6,
+  SD_CARD_ERROR_CMD7,
+  SD_CARD_ERROR_CMD8,
+  SD_CARD_ERROR_CMD9,
+  SD_CARD_ERROR_CMD10,
+  SD_CARD_ERROR_CMD12,
+  SD_CARD_ERROR_CMD13,
+  SD_CARD_ERROR_CMD16,
+
+  // Read, write, erase, and extension commands.
+  SD_CARD_ERROR_CMD17 = 0X30,
+  SD_CARD_ERROR_CMD18,
+  SD_CARD_ERROR_CMD24,
+  SD_CARD_ERROR_CMD25,
+  SD_CARD_ERROR_CMD32,
+  SD_CARD_ERROR_CMD33,
+  SD_CARD_ERROR_CMD38,
+  SD_CARD_ERROR_CMD58,
+  SD_CARD_ERROR_CMD59,
+
+  // Application specific commands.
+  SD_CARD_ERROR_ACMD6 = 0X40,
+  SD_CARD_ERROR_ACMD13,
+  SD_CARD_ERROR_ACMD23,
+  SD_CARD_ERROR_ACMD41,
+
+  // Misc errors.
+  SD_CARD_ERROR_DMA = 0X50,
+  SD_CARD_ERROR_ERASE,
+  SD_CARD_ERROR_ERASE_SINGLE_BLOCK,
+  SD_CARD_ERROR_ERASE_TIMEOUT,
+  SD_CARD_ERROR_INIT_NOT_CALLED,
+  SD_CARD_ERROR_READ,
+  SD_CARD_ERROR_READ_REG,
+  SD_CARD_ERROR_READ_TIMEOUT,
+  SD_CARD_ERROR_STOP_TRAN,
+  SD_CARD_ERROR_WRITE_TIMEOUT,
+  SD_CARD_ERROR_WRITE,
+} sd_error_code_t;
 /******************************************************************************
 * Global variables
 ******************************************************************************/
+
 
 /******************************************************************************
 * Global functions
@@ -127,12 +176,15 @@ typedef struct
 extern "C"{
 #endif
 
-DSTATUS SDHC_InitCard(uint32_t kbaudrate);
+DSTATUS SDHC_InitCard(void);
+uint16_t SDHC_DMADone(void);
+void SDHC_DMAWait(void);
+
 DSTATUS SDHC_GetStatus(void);
 LWord SDHC_GetBlockCnt(void);
 
 uint32_t SDHC_Baudrate(void);
-uint32_t SDHC_GetDMAStatus(void);
+//uint32_t SDHC_GetDMAStatus(void);
 void SDHC_ClearDMAStatus(void);
 //
 DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count);

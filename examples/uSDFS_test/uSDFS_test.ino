@@ -2,10 +2,23 @@
 
 #include "ff.h"                   // File System
 
-#define SERIALX Serial1 // change to USB or HW serial
+#define USE_USB_SERIAL
+#ifdef USE_USB_SERIAL
+	#define SERIALX Serial
+#else
+	#define SERIALX Serial1
+#endif
 
 /* Stop with dying message */
 void die ( FRESULT rc){  SERIALX.printf("Failed with rc=%u.\r\n", rc);  for (;;) ; }
+
+FRESULT rc;        /* Result code */
+FATFS fatfs;      /* File system object */
+FIL fil;        /* File object */
+DIR dir;        /* Directory object */
+FILINFO fno;      /* File information object */
+UINT bw, br;
+TCHAR buff[128];
 
 #define BUFFSIZE (16*128) 
 uint8_t buffer[BUFFSIZE] __attribute__( ( aligned ( 16 ) ) );
@@ -15,19 +28,10 @@ void setup() {
   // put your setup code here, to run once:
 
   while(!SERIALX);
-  delay(100);
- #if SERIALX != Serial // does this work?
-  SERIALX.begin(115200,SERIAL_8N1_RXINV_TXINV);
- #endif
+  #ifndef USB_SERIAL
+	SERIALX.begin(115200,SERIAL_8N1_RXINV_TXINV);
+  #endif
   SERIALX.println("uSDFS");
-
-  FRESULT rc;        /* Result code */
-  FATFS fatfs;      /* File system object */
-  FIL fil;        /* File object */
-  DIR dir;        /* Directory object */
-  FILINFO fno;      /* File information object */
-  UINT bw, br;
-  TCHAR buff[128];
 
   f_mount (&fatfs, (TCHAR*)_T("/"), 0);      /* Mount/Unmount a logical drive */
 
@@ -49,14 +53,14 @@ void setup() {
   if (rc) die(rc);
 
   SERIALX.println("\nOpen same file (hello10.txt).\n");
-  rc = f_open(&fil, (TCHAR*) L"HELLO10.TXT", FA_READ);
+  rc = f_open(&fil, (TCHAR*) _T("HELLO10.TXT"), FA_READ);
   if (rc) die(rc);
 
   SERIALX.println("\nType the file content.\n");
   for (;;) 
   {
       if(!f_gets(buff, sizeof(buff), &fil)) break; /* Read a string from file */
-      SERIALX.printf("%s\r\n",buff);
+      SERIALX.printf("%s",buff);
 }
   if (rc) die(rc);
 
@@ -73,10 +77,12 @@ void setup() {
        // fill buffer
        for(int ii=0;ii<BUFFSIZE;ii++) buffer[ii]='0';
        //write data to file 
+       delayMicroseconds(100);
        rc = f_write(&fil, buffer, BUFFSIZE, &wr);
        if (rc) die(rc);  
        // fill buffer
        for(int ii=0;ii<BUFFSIZE;ii++) buffer[ii]='1';
+       delayMicroseconds(100);
        //write data to file 
        rc = f_write(&fil, buffer, BUFFSIZE, &wr);
        if (rc) die(rc);  

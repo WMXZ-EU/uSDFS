@@ -1,0 +1,19 @@
+for new version of CHaN's Filesystem
+
+copy all but diskio.c and diskio.h
+
+changes in ffconf.h
+#define	_USE_STRFUNC	1
+#define _CODE_PAGE	437
+#define	_USE_LFN	3
+#define	_LFN_UNICODE	1
+#define _FS_EXFAT	1
+
+replace in integer.h 
+  typedef unsigned char	BYTE;
+by
+  #ifdef BYTE
+    #undef BYTE
+  #endif
+  typedef unsigned char	BYTE;
+
