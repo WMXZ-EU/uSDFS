@@ -29,6 +29,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	* symbols aligned with Teensyduino_1.29
 
 ###- 11-sept-2016
+	* Version 1.0.2
 	* upgrader to CHaN's ff12b version
 	* cleaned up sdhc.c code
 	* integrated high-speed switch
