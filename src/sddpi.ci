@@ -1,0 +1,585 @@
+// following code is modified by Walter Zimmer from
+// from version provided by
+// Petr Gargulak (NXP Employee) 
+//https://community.nxp.com/servlet/JiveServlet/download/339474-1-263510/SDSPI_K60_Baremetal.ZIP
+//see also
+//https://community.nxp.com/thread/99202
+
+
+#include "kinetis.h"
+#include "core_pins.h" // testing only
+
+// Missing in Teensyduino 1.29
+#ifndef MPU_CESR_VLD_MASK
+#define MPU_CESR_VLD_MASK         0x1u
+#endif
+#ifndef SDSPI_PROCTL_DTW_MASK
+#define SDSPI_PROCTL_DTW_MASK      0x6u
+#endif
+#ifndef SDSPI_SYSCTL_DVS_MASK
+#define SDSPI_SYSCTL_DVS_MASK      0xF0u
+#endif
+#ifndef SDSPI_SYSCTL_SDCLKFS_MASK
+#define SDSPI_SYSCTL_SDCLKFS_MASK  0xFF00u
+#endif
+#ifndef SDSPI_SYSCTL_DTOCV_MASK
+#define SDSPI_SYSCTL_DTOCV_MASK    0xF0000u
+#endif
+
+#include "sdspi.h"
+#include "sdspi_prv.h"
+
+#define USB_DEBUG
+//#undef USB_DEBUG
+#ifdef USB_DEBUG
+/* some aux functions for pure c code */
+#include "usb_serial.h"
+void logg(char c) {usb_serial_putchar(c); usb_serial_flush_output();}
+void printb(uint32_t x)
+{ char c;
+  int ii;
+  for(ii=31;ii>=0;ii--)
+  { if(!((ii+1)%4)) usb_serial_putchar(' ');
+    c=(x&1<<ii)?'1':'0'; usb_serial_putchar(c);
+  }
+  usb_serial_putchar('\r');
+  usb_serial_putchar('\n');
+  usb_serial_flush_output();
+}
+/* end aux functions */
+#endif
+
+SD_CARD_DESCRIPTOR sdCardDesc;
+
+/******************************************************************************
+*
+*   Public functions
+*
+******************************************************************************/
+DSTATUS SDSPI_GetStatus(void) {  return sdCardDesc.status;}
+
+uint32_t SDSPI_Baudrate(void) { return m_sdspi_baudrate; }
+
+LWord SDSPI_GetBlockCnt(void) { if(sdCardDesc.status)  return 0;  return sdCardDesc.numBlocks; }
+
+uint16_t SDSPI_DMADone(void)
+{ 
+#if SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_SWPOLL 
+	return 1;
+#elif SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_DMA 
+	return  m_sdspi_dmaDone;
+#endif
+}
+void SDSPI_DMAWait(void) 
+{ 
+#if SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_DMA 
+	while(!SDSPI_DMADone()) {yield(); } 
+#endif
+}
+
+//-----------------------------------------------------------------------------
+// FUNCTION:    SDSPI_InitCard
+// RETURNS:     status of initialization(OK, nonInit, noCard, CardProtected)
+//-----------------------------------------------------------------------------  
+DSTATUS SDSPI_InitCard(void)
+{
+	DSTATUS resS;
+	DRESULT resR;
+	LWord ii;
+	uint32_t kbaudrate;
+
+	resS = sdspi_Init();
+
+	sdCardDesc.status = resS;
+	sdCardDesc.address = 0;
+	sdCardDesc.highCapacity = 0;
+	sdCardDesc.version2 = 0;
+	sdCardDesc.numBlocks = 0;
+
+	if(resS) return resS;
+
+	if(!sdspi_CMD(SDSPI_CMD0_XFERTYP, 0)) SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_CMD0);
+
+	if(sdspi_CMD(SDSPI_CMD8_XFERTYP, 0X1AA)) // 3.3V and AA check pattern
+	{
+		if (SDSPI_CMDRSP0 != 0X1AA) SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_CMD8);
+		sdCardDesc.version2 = 1;
+	}
+
+	uint32_t arg = sdCardDesc.version2 ? 0X40300000 : 0x00300000;
+	ii = SDSPI_INITIALIZATION_MAX_CNT;
+	do {
+		if(!(sdspi_CMD(SDSPI_CMD55_XFERTYP,0) && sdspi_CMD(SDSPI_ACMD41_XFERTYP,arg)) || !ii ) 
+			SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_ACMD41);
+	} while ((SDSPI_CMDRSP0 & 0x80000000) == 0 && ii--);
+
+	m_sdspi_ocr = SDSPI_CMDRSP0;
+	if (SDSPI_CMDRSP0 & 0x40000000) 
+	{	// is high capacity
+		sdCardDesc.highCapacity = 1;
+	}
+
+	// Card identify
+	if(!sdspi_CMD(SDSPI_CMD2_XFERTYP,0)) SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_CMD2);
+
+	// Get card address
+	if(!sdspi_CMD(SDSPI_CMD3_XFERTYP,0)) SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_CMD3);
+
+	sdCardDesc.address = SDSPI_CMDRSP0 & 0xFFFF0000;
+
+	// Get card parameters 
+	if(!sdspi_CMD(SDSPI_CMD9_XFERTYP,sdCardDesc.address)) SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_CMD9);
+	if (0 == (SDSPI_CMDRSP3 & 0x00C00000))
+	{
+		LWord read_bl_len, c_size, c_size_mult;
+
+		read_bl_len = (SDSPI_CMDRSP2 >> 8) & 0x0F;
+		c_size = SDSPI_CMDRSP2 & 0x03;
+		c_size = (c_size << 10) | (SDSPI_CMDRSP1 >> 22);
+		c_size_mult = (SDSPI_CMDRSP1 >> 7) & 0x07;
+		sdCardDesc.numBlocks = (c_size + 1) * (1 << (c_size_mult + 2)) * (1 << (read_bl_len - 9));
+	}
+	else
+	{
+		LWord c_size;
+
+		sdCardDesc.version2 = 1;
+		c_size = (SDSPI_CMDRSP1 >> 8) & 0x003FFFFF;
+		sdCardDesc.numBlocks = (c_size + 1) << 10;
+	}
+	
+	if(!sdspi_CMD(SDSPI_CMD10_XFERTYP,sdCardDesc.address)) SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_CMD10);
+	{	uint8_t d[16];
+		  d[0] = SDSPI_CMDRSP3 >> 16;
+		  d[1] = SDSPI_CMDRSP3 >> 8;
+		  d[2] = SDSPI_CMDRSP3;
+		  d[3] = SDSPI_CMDRSP2 >> 24;
+		  d[4] = SDSPI_CMDRSP2 >> 16;
+		  d[5] = SDSPI_CMDRSP2 >> 8;
+		  d[6] = SDSPI_CMDRSP2;
+		  d[7] = SDSPI_CMDRSP1 >> 24;
+		  d[8] = SDSPI_CMDRSP1 >> 16;
+		  d[9] = SDSPI_CMDRSP1 >> 8;
+		  d[10] = SDSPI_CMDRSP1;
+		  d[11] = SDSPI_CMDRSP0 >> 24;
+		  d[12] = SDSPI_CMDRSP0 >> 16;
+		  d[13] = SDSPI_CMDRSP0 >> 8;
+		  d[14] = SDSPI_CMDRSP0;
+		  d[15] = 0;
+	} // function not used yet
+	
+	// Select card
+	if(!sdspi_CMD(SDSPI_CMD7_XFERTYP,sdCardDesc.address)) SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_CMD7);
+
+	// Set Block Size to 512
+	// Block Size in SDSPI Controller is already set to 512 by SDSPI_Init();
+	// Set 512 Block size in SD card
+	if(!sdspi_CMD(SDSPI_CMD16_XFERTYP,SDSPI_BLOCK_SIZE)) SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_CMD16);
+
+	if(SDSPI_DO4BITS)
+	{
+		// Set 4 bit data bus width
+		if(!(sdspi_CMD(SDSPI_CMD55_XFERTYP,sdCardDesc.address) && sdspi_CMD(SDSPI_ACMD6_XFERTYP,2)))		SDSPI_ERROR(STA_NOINIT, SD_CARD_ERROR_ACMD6);
+
+		// Set Data bus width also in SDSPI controller
+		SDSPI_PROCTL &= (~ SDSPI_PROCTL_DTW_MASK);
+		SDSPI_PROCTL |= SDSPI_PROCTL_DTW(SDSPI_PROCTL_DTW_4BIT);
+	}  
+
+#if SDSPI_USE_ISR == 1
+	// adaptet from Bill Greiman
+	if(sdspi_CMD6_Switch(0X00FFFFFF,m_sdspi_CMD6_Status) && (m_sdspi_CMD6_Status[13] & 2) &&
+	   sdspi_CMD6_Switch(0X80FFFFF1,m_sdspi_CMD6_Status)	&& (m_sdspi_CMD6_Status[16] & 0XF) == 1)
+		kbaudrate = 50000;
+	else 
+		kbaudrate = 25000;
+#else
+		kbaudrate = 50000;	
+#endif
+
+	// De-Init GPIO
+	sdspi_InitGPIO(0);
+
+	// Set the SDSPI default baud rate
+	sdspi_SetBaudrate(kbaudrate);
+
+	// Init GPIO
+	sdspi_InitGPIO(0xFFFF);
+
+	return sdCardDesc.status;
+}
+
+//-----------------------------------------------------------------------------
+// FUNCTION:    disk_read
+// RETURNS:     result of operation
+//-----------------------------------------------------------------------------
+DRESULT SDSPI_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count)
+{
+	DRESULT result = RES_OK;
+	LWord* pData = (LWord*)buff;
+
+	// Check if this is ready
+	if(sdCardDesc.status != 0)  return RES_NOTRDY;
+
+	// Check the valid Count of block
+	if(!count) return RES_PARERR; 
+
+	// Convert LBA to UCHAR address if needed
+	if(!sdCardDesc.highCapacity) sector *= 512;
+
+	delayMicroseconds(100); // this is workaround to avoid sdspi blocking on BREN
+	m_sdspi_waitCmd13 = 1;
+	uint32_t cnt = 1<<16; while ((--cnt) && sdspi_isBusy()) yield();  if(!cnt) return RES_ERROR;
+	m_sdspi_waitCmd13 = 0;
+
+	while(SDSPI_PRSSTAT & (SDSPI_PRSSTAT_CIHB | SDSPI_PRSSTAT_CDIHB | SDSPI_PRSSTAT_DLA)) yield();
+	
+	SDSPI_IRQSTAT = 0xffff; // clear interrupt status register
+
+	//
+#if SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_DMA
+	SDSPI_DSADDR  = (LWord)pData;  
+#endif   
+	SDSPI_BLKATTR = SDSPI_BLKATTR_BLKCNT(count) | SDSPI_BLKATTR_BLKSIZE(SDSPI_BLOCK_SIZE);
+	sdspi_enableDma();
+	
+	SDSPI_CMDARG = sector;
+	SDSPI_XFERTYP = count==1 ? SDSPI_CMD17_XFERTYP: SDSPI_CMD18_XFERTYP; 
+
+#ifdef SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_SWPOLL
+	if(sdspi_waitCommandReady())
+		result = sdspi_ReadBlock(pData,count,SDSPI_BLOCK_SIZE);
+	else
+		result=RES_ERROR;
+#elif SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_DMA
+	result=RES_OK;
+#endif	
+	// Auto CMD12 is enabled
+	if((result != RES_OK) && (count>1))
+		result=sdspi_CMD12_StopTransferWaitForBusy();
+  	return result; 
+}
+
+//-----------------------------------------------------------------------------
+// FUNCTION:    disk_write
+// RETURNS:     result of operation
+//-----------------------------------------------------------------------------
+DRESULT SDSPI_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
+{
+	DRESULT result = RES_OK;
+	LWord* pData = (LWord*)buff;
+
+	// Check if this is ready
+	if(sdCardDesc.status != 0)  return RES_NOTRDY;
+
+	// Check the valid Count of block
+	if(!count) return RES_PARERR; 
+
+	// Convert LBA to UCHAR address if needed
+	if(!sdCardDesc.highCapacity)  sector *= 512;
+
+	delayMicroseconds(100); // this is workaround to avoid sdspi blocking on BWEN
+	m_sdspi_waitCmd13 = 1;
+	uint32_t cnt = 1<<16; while ((--cnt) && sdspi_isBusy()) yield();  if(!cnt) return RES_ERROR;
+	m_sdspi_waitCmd13 = 0;
+
+	while(SDSPI_PRSSTAT & (SDSPI_PRSSTAT_CIHB | SDSPI_PRSSTAT_CDIHB | SDSPI_PRSSTAT_DLA)) yield();
+	
+	SDSPI_IRQSTAT = 0xffff; // clear interrupt status register
+#if SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_DMA
+	SDSPI_DSADDR  = (LWord)pData;  
+#endif   
+	SDSPI_BLKATTR = SDSPI_BLKATTR_BLKCNT(count) | SDSPI_BLKATTR_BLKSIZE(SDSPI_BLOCK_SIZE);
+	sdspi_enableDma();
+	
+	SDSPI_CMDARG = sector;
+	SDSPI_XFERTYP = count==1 ? SDSPI_CMD24_XFERTYP: SDSPI_CMD25_XFERTYP; 
+
+#if SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_SWPOLL
+	if(sdspi_waitCommandReady())
+		result = sdspi_WriteBlock(pData,count,SDSPI_BLOCK_SIZE);
+	else
+		result=RES_ERROR;
+#elif SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_DMA
+		result=RES_OK;
+#endif	
+	// Auto CMD12 is enabled
+	if((result != RES_OK) && (count>1))
+		result=sdspi_CMD12_StopTransferWaitForBusy();
+	return result;
+}
+
+static uint32_t sdspi_waitCommandReady(void)
+{	do
+	{	m_sdspi_irqstat = SDSPI_IRQSTAT;
+	} while(!( m_sdspi_irqstat & (SDSPI_IRQSTAT_CC | SDSPI_IRQSTAT_CMD_ERROR)));
+
+	SDSPI_IRQSTAT =m_sdspi_irqstat;
+	
+	return ((m_sdspi_irqstat & SDSPI_IRQSTAT_CC) && !(m_sdspi_irqstat & SDSPI_IRQSTAT_CMD_ERROR));
+}
+/******************************************************************************
+*
+*   Private functions
+*
+******************************************************************************/
+//-----------------------------------------------------------------------------
+// FUNCTION:    sdspi_Init
+//-----------------------------------------------------------------------------  
+static DSTATUS sdspi_Init(void)
+{
+#ifdef HAS_KINETIS_MPU
+	  // Allow SDSPI Bus Master access. (from Bill Greiman)
+	  MPU_RGDAAC0 |= 0x0C000000;
+#endif
+
+    // Enable clock to SDSPI peripheral
+    SIM_SCGC3 |= SIM_SCGC3_SDSPI;
+
+    // Enable clock to PORT E peripheral (all SDSPI BUS signals)
+    SIM_SCGC5 |= SIM_SCGC5_PORTE;
+    
+    SIM_SCGC6 |= SIM_SCGC6_DMAMUX;
+    SIM_SCGC7 |= SIM_SCGC7_DMA;
+
+    // De-init GPIO - to prevent unwanted clocks on bus
+    sdspi_InitGPIO(0);
+    
+    /* Reset SDSPI */
+    SDSPI_SYSCTL = SDSPI_SYSCTL_RSTA | SDSPI_SYSCTL_SDCLKFS(0x80);
+    while (SDSPI_SYSCTL & SDSPI_SYSCTL_RSTA) yield();
+    
+    /* Initial values */ // to do - Check values
+    SDSPI_VENDOR = 0;
+    SDSPI_PROCTL = SDSPI_PROCTL_EMODE(SDSPI_PROCTL_EMODE_INVARIANT) | SDSPI_PROCTL_D3CD;
+    SDSPI_WML = SDSPI_WML_RDWML(16) | SDSPI_WML_WRWML(16); // initially for CMD6
+
+    /* Set the SDSPI initial baud rate divider and start */
+    sdspi_SetBaudrate(400);
+
+    /* Poll inhibit bits */
+    while (SDSPI_PRSSTAT & (SDSPI_PRSSTAT_CIHB | SDSPI_PRSSTAT_CDIHB)) yield();
+
+    /* Init GPIO again */
+    sdspi_InitGPIO(0xFFFF);
+    
+    /* Enable requests */
+    SDSPI_IRQSTAT = 0xFFFF;
+	SDSPI_IRQSTATEN = SDSPI_IRQSTATEN_MASK;
+    
+  #if SDSPI_USE_ISR == 1
+	NVIC_SET_PRIORITY(IRQ_SDSPI, 6*16); //4*16 is Serial
+    NVIC_ENABLE_IRQ(IRQ_SDSPI);
+    SDSPI_IRQSIGEN = SDSPI_IRQSIGEN_DINTIEN;
+  #endif
+
+    /* 80 initial clocks */
+    SDSPI_SYSCTL |= SDSPI_SYSCTL_INITA;
+    while (SDSPI_SYSCTL & SDSPI_SYSCTL_INITA) yield();
+
+    // to do - check if this needed
+    SDSPI_IRQSTAT |= SDSPI_IRQSTAT_CRM;
+    
+	// Check card
+	if(!(SDSPI_PRSSTAT & SDSPI_PRSSTAT_CINS))	return STA_NODISK;
+	
+	return 0;
+}
+
+
+//-----------------------------------------------------------------------------
+// FUNCTION:    sdspi_InitGPIO
+// RETURNS:     none
+//----------------------------------------------------------------------------- 
+static void sdspi_InitGPIO(Word init)
+{  
+  PORTE_PCR0 = init & (PORT_PCR_MUX(4) | PORT_PCR_PS | PORT_PCR_PE | PORT_PCR_DSE);    /* SDSPI.D1  */
+  PORTE_PCR1 = init & (PORT_PCR_MUX(4) | PORT_PCR_PS | PORT_PCR_PE | PORT_PCR_DSE);    /* SDSPI.D0  */
+  PORTE_PCR2 = init & (PORT_PCR_MUX(4) | PORT_PCR_DSE);                                /* SDSPI.CLK */
+  PORTE_PCR3 = init & (PORT_PCR_MUX(4) | PORT_PCR_PS | PORT_PCR_PE | PORT_PCR_DSE);    /* SDSPI.CMD */
+  PORTE_PCR4 = init & (PORT_PCR_MUX(4) | PORT_PCR_PS | PORT_PCR_PE | PORT_PCR_DSE);    /* SDSPI.D3  */
+  PORTE_PCR5 = init & (PORT_PCR_MUX(4) | PORT_PCR_PS | PORT_PCR_PE | PORT_PCR_DSE);    /* SDSPI.D2  */  
+}
+
+//-----------------------------------------------------------------------------
+// FUNCTION:    sdspi_SetBaudrate
+// RETURNS:     result
+//----------------------------------------------------------------------------- 
+static DRESULT sdspi_SetBaudrate(uint32_t kbaudrate) 
+{
+	LWord sysctl, time_out;
+
+	// Disable SDSPI clocks
+	SDSPI_SYSCTL &= (~ SDSPI_SYSCTL_SDCLKEN);
+
+	// get dividers from requested baud rate 
+	uint32_t aux=F_CPU;
+	uint32_t ii=0,jj=1;
+	uint32_t baudrate=kbaudrate*1000;
+
+	while(aux/(16*(1<<ii))>baudrate) ii++;
+	while(aux/(jj*(1<<ii))>baudrate) jj++;
+
+	uint32_t minpresc=(1<<ii)>>1;
+	uint32_t mindiv=jj-1;
+
+	m_sdspi_baudrate=F_CPU/((1<<minpresc) * (mindiv+1));
+
+	// Change dividers
+	sysctl = SDSPI_SYSCTL & 
+			(~ (SDSPI_SYSCTL_DTOCV_MASK | SDSPI_SYSCTL_SDCLKFS_MASK | SDSPI_SYSCTL_DVS_MASK));
+	SDSPI_SYSCTL = sysctl | 
+			(SDSPI_SYSCTL_DTOCV(0x0E) | SDSPI_SYSCTL_SDCLKFS(minpresc) | SDSPI_SYSCTL_DVS(mindiv));
+
+	/* Wait for stable clock */
+	time_out = 0xfffff;
+	while ((0 == (SDSPI_PRSSTAT & SDSPI_PRSSTAT_SDSTB)) && time_out) time_out--;
+
+	/* Enable SDSPI clocks */
+	SDSPI_SYSCTL |= SDSPI_SYSCTL_SDCLKEN;
+	SDSPI_IRQSTAT |= SDSPI_IRQSTAT_DTOE;
+
+	if(time_out)
+		return RES_OK;
+	else
+		return RES_ERROR;
+  
+}
+
+//-----------------------------------------------------------------------------
+// FUNCTION:    SDSPI_ReadBlock
+// RETURNS:     result
+//----------------------------------------------------------------------------- 
+static DRESULT sdspi_ReadBlock(LWord* pData, LWord Count, LWord Size)
+{
+#if SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_SWPOLL 
+	int ii,jj;
+	int cnt;
+	ii = (Count*Size)/(sizeof(unsigned long)*SDSPI_FIFO_BUFFER_SIZE);    
+	while (ii--) 
+	{        
+		if (SDSPI_IRQSTAT & (SDSPI_IRQSTAT_DEBE | SDSPI_IRQSTAT_DCE | SDSPI_IRQSTAT_DTOE)) 
+		{ // check for read errors           
+			SDSPI_IRQSTAT |= (SDSPI_IRQSTAT_DEBE | SDSPI_IRQSTAT_DCE | SDSPI_IRQSTAT_DTOE | SDSPI_IRQSTAT_BRR);
+			return 10;  // return error        
+		}
+		//
+		cnt=1<<24; while (--cnt && !(SDSPI_PRSSTAT & SDSPI_PRSSTAT_BREN)) yield(); if(!cnt) return 11;
+		
+		SDSPI_IRQSTAT |= SDSPI_IRQSTAT_BRR;	
+		for(jj=0;jj<SDSPI_FIFO_BUFFER_SIZE;jj++)	*pData++ = SDSPI_DATPORT;
+	}    
+	
+	while (!(SDSPI_IRQSTAT & SDSPI_IRQSTAT_TC));  // wait for transfer to complete
+	SDSPI_IRQSTAT = (SDSPI_IRQSTAT_TC | SDSPI_IRQSTAT_BRR | SDSPI_IRQSTAT_AC12E);
+	
+#endif  
+   return RES_OK;
+}
+
+//-----------------------------------------------------------------------------
+// FUNCTION:    sdspi_WriteBlock
+// RETURNS:     result
+//----------------------------------------------------------------------------- 
+static DRESULT sdspi_WriteBlock(const LWord* pData, LWord Count, LWord Size)
+{
+#if SDSPI_TRANSFERTYPE == SDSPI_TRANSFERTYPE_SWPOLL 
+	int ii,jj;
+	int cnt;
+	ii = (Count*Size)/(sizeof(unsigned long)*SDSPI_FIFO_BUFFER_SIZE);    
+	while (ii--) 
+	{        
+		if (SDSPI_IRQSTAT & (SDSPI_IRQSTAT_DEBE | SDSPI_IRQSTAT_DCE | SDSPI_IRQSTAT_DTOE)) 
+		{ // check for read errors           
+			SDSPI_IRQSTAT |= (SDSPI_IRQSTAT_DEBE | SDSPI_IRQSTAT_DCE | SDSPI_IRQSTAT_DTOE | SDSPI_IRQSTAT_BWR);
+			return 20;  // return error        
+		}
+		//
+		cnt=1<<24; while (--cnt && !(SDSPI_PRSSTAT & SDSPI_PRSSTAT_BWEN)) yield(); if(!cnt) return 21;
+		
+		SDSPI_IRQSTAT |= SDSPI_IRQSTAT_BWR;	
+		for(jj=0;jj<SDSPI_FIFO_BUFFER_SIZE;jj++)	 SDSPI_DATPORT = *pData++;
+	}    
+	while (!(SDSPI_IRQSTAT & SDSPI_IRQSTAT_TC));  // wait for transfer to complete
+	SDSPI_IRQSTAT = (SDSPI_IRQSTAT_TC | SDSPI_IRQSTAT_BWR | SDSPI_IRQSTAT_AC12E);
+#endif	
+   return RES_OK;
+
+}
+
+//-------------------------------------------------------------------------------------------
+static uint16_t sdspi_CMD(LWord xfertype, LWord arg)
+{
+    // Wait for cmd line idle // to do timeout PRSSTAT[CDIHB] and the PRSSTAT[CIHB]
+    while (SDSPI_PRSSTAT & (SDSPI_PRSSTAT_CIHB | SDSPI_PRSSTAT_CDIHB)) yield();
+
+	SDSPI_CMDARG = arg;
+	SDSPI_XFERTYP = xfertype;
+	return sdspi_waitCommandReady();
+}
+
+static uint16_t sdspi_isBusy(void) 
+{
+	if (!sdspi_CMD(SDSPI_CMD13_XFERTYP, sdCardDesc.address)) return 1;
+	return !(SDSPI_CMDRSP0 & CARD_STATUS_READY_FOR_DATA);
+}
+
+//================================================================================
+void sdspi_isr(void) 
+{	while(!(SDSPI_IRQSTAT & SDSPI_IRQSTAT_TC)) yield();	// wait for transfer to complete
+ 	SDSPI_IRQSIGEN = 0;
+	__disable_irq();
+	m_sdspi_irqstat = SDSPI_IRQSTAT;
+	SDSPI_IRQSTAT = m_sdspi_irqstat;
+	__enable_irq();
+  	SDSPI_IRQSIGEN = SDSPI_IRQSIGEN_DINTIEN; // re-enable Interrupt
+	m_sdspi_dmaDone = 1;
+}
+//-----------------------------------------------------------------------------
+static void sdspi_enableDma(void) 
+{
+    while (SDSPI_PRSSTAT & (SDSPI_PRSSTAT_CIHB | SDSPI_PRSSTAT_CDIHB)) yield();
+	m_sdspi_dmaDone = 0;
+	m_sdspi_irqstat = 0;
+	SDSPI_IRQSIGEN = SDSPI_IRQSIGEN_DINTIEN; // reanable Interrupt
+}
+//-----------------------------------------------------------------------------
+static uint16_t sdspi_waitDma(void) 
+{
+	while(!m_sdspi_dmaDone) yield();
+	return (m_sdspi_irqstat & SDSPI_IRQSTAT_TC) && !(m_sdspi_irqstat & SDSPI_IRQSTAT_ERROR);
+}
+//-----------------------------------------------------------------------------
+static uint16_t sdspi_CMD6_Switch(uint32_t arg, uint8_t* status) 
+{
+    while (SDSPI_PRSSTAT & (SDSPI_PRSSTAT_CIHB | SDSPI_PRSSTAT_CDIHB | SDSPI_PRSSTAT_DLA)) yield();
+	SDSPI_IRQSTAT |= SDSPI_IRQSTAT_TC;
+	SDSPI_DSADDR  = (LWord)status;
+	SDSPI_BLKATTR = SDSPI_BLKATTR_BLKCNT(1) | SDSPI_BLKATTR_BLKSIZE(64);
+
+	sdspi_enableDma();
+	if(!sdspi_CMD(SDSPI_CMD6_XFERTYP , arg)) SDSPI_ERROR(0x06, SD_CARD_ERROR_CMD6);
+	if(sdspi_waitDma()) return 1; 
+	
+	m_sdspi_error = SD_CARD_ERROR_CMD6;
+	return 0;
+
+}
+
+//-----------------------------------------------------------------------------
+// FUNCTION:    SDSPI_CMD12_StopTransferWaitForBusy
+// RETURNS:     result
+//----------------------------------------------------------------------------- 
+static DRESULT sdspi_CMD12_StopTransferWaitForBusy(void)
+{
+	LWord timeOut = 100;
+	uint16_t result;
+	do{
+		result = sdspi_CMD(SDSPI_CMD12_XFERTYP,0);
+		timeOut--;
+	} while(timeOut && (SDSPI_PRSSTAT & SDSPI_PRSSTAT_DLA) && result); // DataLineActive
+
+	if(!result) return RES_ERROR;
+	if(!timeOut) return RES_NONRSPNS;
+	return RES_OK;
+}

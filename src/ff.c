@@ -20,7 +20,7 @@
 
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of device I/O functions */
-void logg(char c);
+//void logg(char c);
 
 /*--------------------------------------------------------------------------
 

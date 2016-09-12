@@ -30,7 +30,7 @@
 #include "sdhc_prv.h"
 
 #define USB_DEBUG
-//#undef USB_DEBUG
+#undef USB_DEBUG
 #ifdef USB_DEBUG
 /* some aux functions for pure c code */
 #include "usb_serial.h"
@@ -229,7 +229,7 @@ DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 
 	delayMicroseconds(100); // this is workaround to avoid sdhc blocking on BREN
 	m_sdhc_waitCmd13 = 1;
-	uint32_t cnt = 1<<16; while ((--cnt) && sdhc_isBusy()) yield();  if(!cnt) RES_ERROR;
+	uint32_t cnt = 1<<16; while ((--cnt) && sdhc_isBusy()) yield();  if(!cnt) return RES_READERROR;
 	m_sdhc_waitCmd13 = 0;
 
 	while(SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) yield();
@@ -250,7 +250,7 @@ DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 	if(sdhc_waitCommandReady())
 		result = sdhc_ReadBlock(pData,count,SDHC_BLOCK_SIZE);
 	else
-		result=RES_ERROR;
+		result=RES_READERROR;
 #elif SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
 	result=RES_OK;
 #endif	
@@ -278,9 +278,9 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 	// Convert LBA to UCHAR address if needed
 	if(!sdCardDesc.highCapacity)  sector *= 512;
 
-	delayMicroseconds(100); // this is workaround to avoid sdhc blocking on BREN
+	delayMicroseconds(100); // this is workaround to avoid sdhc blocking on BWEN
 	m_sdhc_waitCmd13 = 1;
-	uint32_t cnt = 1<<16; while ((--cnt) && sdhc_isBusy()) yield();  if(!cnt) RES_ERROR;
+	uint32_t cnt = 1<<16; while ((--cnt) && sdhc_isBusy()) yield();  if(!cnt) return RES_WRITEERROR;
 	m_sdhc_waitCmd13 = 0;
 
 	while(SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) yield();
@@ -299,7 +299,7 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 	if(sdhc_waitCommandReady())
 		result = sdhc_WriteBlock(pData,count,SDHC_BLOCK_SIZE);
 	else
-		result=RES_ERROR;
+		result=RES_WRITEERROR;
 #elif SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
 		result=RES_OK;
 #endif	

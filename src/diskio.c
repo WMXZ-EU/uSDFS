@@ -4,7 +4,7 @@
 #include "sdhc.h"
 
 #define USB_DEBUG
-//#undef USB_DEBUG
+#undef USB_DEBUG
 #ifdef USB_DEBUG
 void logg(char c);
 #endif
@@ -43,6 +43,9 @@ DSTATUS disk_initialize (BYTE drv)
 //-----------------------------------------------------------------------------
 DSTATUS disk_status (BYTE drv)
 {
+  if(drv)
+    return RES_PARERR;
+
   return SDHC_GetStatus();
 }
 

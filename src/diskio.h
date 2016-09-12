@@ -23,7 +23,9 @@ typedef enum {
 	RES_WRPRT,		/* 2: Write Protected */
 	RES_NOTRDY,		/* 3: Not Ready */
 	RES_PARERR,		/* 4: Invalid Parameter */
-    RES_NONRSPNS            /* 5: No Response */ // from old diskio.h
+    RES_NONRSPNS,   /* 5: No Response */ // from old diskio.h
+	RES_READERROR,  /* 6: Read Error */
+	RES_WRITEERROR  /* 7: Write Error */
 } DRESULT;
 
 

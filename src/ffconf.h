@@ -116,13 +116,13 @@
 /  ff_memfree(), must be added to the project. */
 
 
-#define	_LFN_UNICODE	0
+#define	_LFN_UNICODE	1
 /* This option switches character encoding on the API. (0:ANSI/OEM or 1:UTF-16)
 /  To use Unicode string for the path name, enable LFN and set _LFN_UNICODE = 1.
 /  This option also affects behavior of string I/O functions. */
 
 
-#define _STRF_ENCODE	1
+#define _STRF_ENCODE	3
 /* When _LFN_UNICODE == 1, this option selects the character encoding ON THE FILE to
 /  be read/written via string I/O functions, f_gets(), f_putc(), f_puts and f_printf().
 /
@@ -209,7 +209,7 @@
 /  buffer in the file system object (FATFS) is used for the file data transfer. */
 
 
-#define _FS_EXFAT	0
+#define _FS_EXFAT	1
 /* This option switches support of exFAT file system. (0:Disable or 1:Enable)
 /  When enable exFAT, also LFN needs to be enabled. (_USE_LFN >= 1)
 /  Note that enabling exFAT discards C89 compatibility. */
