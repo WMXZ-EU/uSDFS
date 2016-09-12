@@ -28,6 +28,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 ###- 09-aug-2016
 	* symbols aligned with Teensyduino_1.29
 
+<<<<<<< HEAD
 ###- 12-sept-2016
 	* version 1.0.2
 	* upgraded to ELM-CHaN's ff12b
@@ -36,3 +37,10 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	* needs -fshort-wchar  in boards.txt added to teensy36.build.flags.common for exFAT operation
 	
 
+=======
+###- 11-sept-2016
+	* Version 1.0.2
+	* upgrader to CHaN's ff12b version
+	* cleaned up sdhc.c code
+	* integrated high-speed switch
+>>>>>>> bd668125167226ebea5b8c33955c16bd65e6db43
