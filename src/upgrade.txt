@@ -1,13 +1,14 @@
-for new version of CHaN's Filesystem
+from new version of CHaN's Filesystem
 
 copy all but diskio.c and diskio.h
 
 changes in ffconf.h
-#define	_USE_STRFUNC	1
-#define _CODE_PAGE	437
-#define	_USE_LFN	3
-#define	_LFN_UNICODE	1
-#define _FS_EXFAT	1
+  #define	_USE_STRFUNC	1
+  #define	_CODE_PAGE	437
+  #define	_USE_LFN	1
+  #define	_LFN_UNICODE	1
+  #define	_STRF_ENCODE	3
+  #define	_FS_EXFAT	1
 
 replace in integer.h 
   typedef unsigned char	BYTE;
@@ -17,3 +18,10 @@ by
   #endif
   typedef unsigned char	BYTE;
 
+
+to force UTF16 in exFAT replace in ff.h
+  #define _T(x) L ## x
+  #define _TEXT(x) L ## x
+by 
+  #define _T(x) u ## x
+  #define _TEXT(x) u ## x
