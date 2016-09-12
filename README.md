@@ -27,6 +27,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 
 ###- 09-aug-2016
 	* symbols aligned with Teensyduino_1.29
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 ###- 12-sept-2016
@@ -44,3 +45,5 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	* cleaned up sdhc.c code
 	* integrated high-speed switch
 >>>>>>> bd668125167226ebea5b8c33955c16bd65e6db43
+=======
+>>>>>>> origin/master
