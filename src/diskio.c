@@ -106,7 +106,9 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 #if MULTI_SECTOR == 1
 	SDHC_DMAWait();	// make sure uSD card is not busy
 	rc= SDHC_WriteBlocks((BYTE*)buff, sector, count);
+#if WRITE_SYNCHRONIZE==1
 	SDHC_DMAWait();
+#endif
 #else
 	BYTE *ptr=(BYTE *)buff;
 	for(;count;count--)

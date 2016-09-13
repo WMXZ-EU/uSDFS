@@ -239,6 +239,7 @@ DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 	//
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
 	SDHC_DSADDR  = (LWord)pData;  
+	SDHC_SYSCTL |=  SDHC_SYSCTL_HCKEN;
 #endif   
 	SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(count) | SDHC_BLKATTR_BLKSIZE(SDHC_BLOCK_SIZE);
 	sdhc_enableDma();
@@ -528,10 +529,22 @@ static uint16_t sdhc_isBusy(void)
 void sdhc_isr(void) 
 {	while(!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC)) yield();	// wait for transfer to complete
  	SDHC_IRQSIGEN = 0;
+	SDHC_IRQSTATEN &= ~SDHC_IRQSTATEN_DINTSEN;
+
+	// from e3978 in http://www.nxp.com/docs/pcn_attachments/15946_KINETIS_2N03G.pdf
+	if(SDHC_SYSCTL & SDHC_SYSCTL_HCKEN)
+		SDHC_SYSCTL &=  ~SDHC_SYSCTL_HCKEN;
+
 	__disable_irq();
 	m_sdhc_irqstat = SDHC_IRQSTAT;
 	SDHC_IRQSTAT = m_sdhc_irqstat;
 	__enable_irq();
+
+	// from e3984 in http://www.nxp.com/docs/pcn_attachments/15946_KINETIS_2N03G.pdf
+    SDHC_PROCTL &= ~SDHC_PROCTL_D3CD;
+    SDHC_PROCTL |=  SDHC_PROCTL_D3CD;
+
+	SDHC_IRQSTATEN |= SDHC_IRQSTATEN_DINTSEN;
   	SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN; // re-enable Interrupt
 	m_sdhc_dmaDone = 1;
 }
