@@ -246,7 +246,7 @@ DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 	SDHC_CMDARG = sector;
 	SDHC_XFERTYP = count==1 ? SDHC_CMD17_XFERTYP: SDHC_CMD18_XFERTYP; 
 
-#ifdef SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_SWPOLL
+#if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_SWPOLL
 	if(sdhc_waitCommandReady())
 		result = sdhc_ReadBlock(pData,count,SDHC_BLOCK_SIZE);
 	else
