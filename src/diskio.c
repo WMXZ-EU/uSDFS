@@ -198,7 +198,7 @@ DRESULT disk_ioctl (BYTE drv, BYTE ctrl, void* buff)
       break;
 #endif
     case CTRL_DMA_STATUS:
-		*(LWord*)buff = SDHC_DMADone();
+		*((uint16_t*)buff) = SDHC_DMADone();
       break;
     default:
       return RES_PARERR;

@@ -73,7 +73,7 @@ uint16_t SDHC_DMADone(void)
 void SDHC_DMAWait(void) 
 { 
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA 
-	while(!SDHC_DMADone()) {yield(); } 
+	while(!SDHC_DMADone()) { /*yield() */; }
 #endif
 }
 
@@ -229,10 +229,10 @@ DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 
 	delayMicroseconds(100); // this is workaround to avoid sdhc blocking on BREN
 	m_sdhc_waitCmd13 = 1;
-	uint32_t cnt = 1<<16; while ((--cnt) && sdhc_isBusy()) yield();  if(!cnt) return RES_READERROR;
+	uint32_t cnt = 1<<16; while ((--cnt) && sdhc_isBusy()) /* yield() */;  if(!cnt) return RES_READERROR;
 	m_sdhc_waitCmd13 = 0;
 
-	while(SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) yield();
+	while(SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) /* yield() */;
 	
 	SDHC_IRQSTAT = 0xffff; // clear interrupt status register
 
@@ -279,12 +279,12 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 	// Convert LBA to UCHAR address if needed
 	if(!sdCardDesc.highCapacity)  sector *= 512;
 
-	delayMicroseconds(100); // this is workaround to avoid sdhc blocking on BWEN
+//	delayMicroseconds(100); // this is workaround to avoid sdhc blocking on BWEN
 	m_sdhc_waitCmd13 = 1;
-	uint32_t cnt = 1<<16; while ((--cnt) && sdhc_isBusy()) yield();  if(!cnt) return RES_WRITEERROR;
+	uint32_t cnt = 1<<16; while ((--cnt) && sdhc_isBusy()) /* yield() */;  if(!cnt) return RES_WRITEERROR;
 	m_sdhc_waitCmd13 = 0;
 
-	while(SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) yield();
+	while(SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) /* yield() */;
 	
 	SDHC_IRQSTAT = 0xffff; // clear interrupt status register
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
@@ -348,7 +348,7 @@ static DSTATUS sdhc_Init(void)
     
     /* Reset SDHC */
     SDHC_SYSCTL = SDHC_SYSCTL_RSTA | SDHC_SYSCTL_SDCLKFS(0x80);
-    while (SDHC_SYSCTL & SDHC_SYSCTL_RSTA) yield();
+    while (SDHC_SYSCTL & SDHC_SYSCTL_RSTA) /* yield() */;
     
     /* Initial values */ // to do - Check values
     SDHC_VENDOR = 0;
@@ -359,7 +359,7 @@ static DSTATUS sdhc_Init(void)
     sdhc_SetBaudrate(400);
 
     /* Poll inhibit bits */
-    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB)) yield();
+    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB)) /* yield() */;
 
     /* Init GPIO again */
     sdhc_InitGPIO(0xFFFF);
@@ -376,7 +376,7 @@ static DSTATUS sdhc_Init(void)
 
     /* 80 initial clocks */
     SDHC_SYSCTL |= SDHC_SYSCTL_INITA;
-    while (SDHC_SYSCTL & SDHC_SYSCTL_INITA) yield();
+    while (SDHC_SYSCTL & SDHC_SYSCTL_INITA) /* yield() */;
 
     // to do - check if this needed
     SDHC_IRQSTAT |= SDHC_IRQSTAT_CRM;
@@ -465,7 +465,7 @@ static DRESULT sdhc_ReadBlock(LWord* pData, LWord Count, LWord Size)
 			return 10;  // return error        
 		}
 		//
-		cnt=1<<24; while (--cnt && !(SDHC_PRSSTAT & SDHC_PRSSTAT_BREN)) yield(); if(!cnt) return 11;
+		cnt=1<<24; while (--cnt && !(SDHC_PRSSTAT & SDHC_PRSSTAT_BREN)) /* yield() */; if(!cnt) return 11;
 		
 		SDHC_IRQSTAT |= SDHC_IRQSTAT_BRR;	
 		for(jj=0;jj<SDHC_FIFO_BUFFER_SIZE;jj++)	*pData++ = SDHC_DATPORT;
@@ -496,7 +496,7 @@ static DRESULT sdhc_WriteBlock(const LWord* pData, LWord Count, LWord Size)
 			return 20;  // return error        
 		}
 		//
-		cnt=1<<24; while (--cnt && !(SDHC_PRSSTAT & SDHC_PRSSTAT_BWEN)) yield(); if(!cnt) return 21;
+		cnt=1<<24; while (--cnt && !(SDHC_PRSSTAT & SDHC_PRSSTAT_BWEN)) /* yield() */; if(!cnt) return 21;
 		
 		SDHC_IRQSTAT |= SDHC_IRQSTAT_BWR;	
 		for(jj=0;jj<SDHC_FIFO_BUFFER_SIZE;jj++)	 SDHC_DATPORT = *pData++;
@@ -512,7 +512,7 @@ static DRESULT sdhc_WriteBlock(const LWord* pData, LWord Count, LWord Size)
 static uint16_t sdhc_CMD(LWord xfertype, LWord arg)
 {
     // Wait for cmd line idle // to do timeout PRSSTAT[CDIHB] and the PRSSTAT[CIHB]
-    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB)) yield();
+    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB)) /* yield() */;
 
 	SDHC_CMDARG = arg;
 	SDHC_XFERTYP = xfertype;
@@ -527,7 +527,8 @@ static uint16_t sdhc_isBusy(void)
 
 //================================================================================
 void sdhc_isr(void) 
-{	while(!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC)) yield();	// wait for transfer to complete
+{
+	while(!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC))  yield() ;	// wait for transfer to complete
  	SDHC_IRQSIGEN = 0;
 	SDHC_IRQSTATEN &= ~SDHC_IRQSTATEN_DINTSEN;
 
@@ -536,7 +537,7 @@ void sdhc_isr(void)
 		SDHC_SYSCTL &=  ~SDHC_SYSCTL_HCKEN;
 
 	__disable_irq();
-	m_sdhc_irqstat = SDHC_IRQSTAT;
+	m_sdhc_irqstat = SDHC_IRQSTAT; // we clear all interrupt status bits
 	SDHC_IRQSTAT = m_sdhc_irqstat;
 	__enable_irq();
 
@@ -551,7 +552,7 @@ void sdhc_isr(void)
 //-----------------------------------------------------------------------------
 static void sdhc_enableDma(void) 
 {
-    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB)) yield();
+    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB)) /* yield() */;
 	m_sdhc_dmaDone = 0;
 	m_sdhc_irqstat = 0;
 	SDHC_IRQSIGEN = SDHC_IRQSIGEN_DINTIEN; // reanable Interrupt
@@ -559,13 +560,13 @@ static void sdhc_enableDma(void)
 //-----------------------------------------------------------------------------
 static uint16_t sdhc_waitDma(void) 
 {
-	while(!m_sdhc_dmaDone) yield();
+	while(!m_sdhc_dmaDone) /* yield() */;
 	return (m_sdhc_irqstat & SDHC_IRQSTAT_TC) && !(m_sdhc_irqstat & SDHC_IRQSTAT_ERROR);
 }
 //-----------------------------------------------------------------------------
 static uint16_t sdhc_CMD6_Switch(uint32_t arg, uint8_t* status) 
 {
-    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) yield();
+    while (SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) /* yield() */;
 	SDHC_IRQSTAT |= SDHC_IRQSTAT_TC;
 	SDHC_DSADDR  = (LWord)status;
 	SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(1) | SDHC_BLKATTR_BLKSIZE(64);
