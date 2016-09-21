@@ -35,4 +35,8 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	* added cmd6 switch for high speed sdio
 	* needs -fshort-wchar  in boards.txt added to teensy36.build.flags.common for exFAT operation
 	
+###- 21-sept-2016
+	* -fshort-wchar  addition in boards.txt is NOT neeeded any more
+	* changing _T(x) macro to #define _T(x) u ## x in ff.h does the job  (u compiler directive indicate 16 bit)
+	
 
