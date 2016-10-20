@@ -15,7 +15,11 @@ FATFS fatfs;      /* File system object */
 FIL fil;        /* File object */
 
 #define MXFN 100 // maximal number of files 
-#define BUFFSIZE (32*1024) // size of buffer to be written
+#if defined(__MK20DX256__)
+  #define BUFFSIZE (8*1024) // size of buffer to be written
+#elif defined(__MK66FX1M0__)
+  #define BUFFSIZE (32*1024) // size of buffer to be written
+#endif
 
 uint8_t buffer[BUFFSIZE] __attribute__( ( aligned ( 16 ) ) );
 UINT wr;
@@ -44,7 +48,7 @@ char * tchar2char(  TCHAR * tcharString, size_t nn, char * charString)
 
 //=========================================================================
 uint32_t count=0;
-uint32_t ifn=0;
+uint32_t ifn=2; // to test corrupted file (should be 0)
 uint32_t isFileOpen=0;
 char filename[80];
 TCHAR wfilename[80];
@@ -70,7 +74,8 @@ void setup()
 void loop()
 {
   if(ifn>MXFN) 
-  { digitalWrite(13,HIGH); 
+  { pinMode(13,OUTPUT);
+    digitalWrite(13,HIGH); 
     delay(100); 
     digitalWrite(13,LOW); 
     delay(100); 
@@ -104,9 +109,29 @@ void loop()
     SERIALX.println(filename);
     char2tchar(filename,80,wfilename);
     //
+    // check status of file
+    rc =f_stat(wfilename,0);
+    Serial.printf("stat %d %x\n",rc,fil.obj.sclust);
+    
     rc = f_open(&fil, wfilename, FA_WRITE | FA_CREATE_ALWAYS);
-    if (rc) die("open", rc);
-    //
+    Serial.printf(" opened %d %x\n\r",rc,fil.obj.sclust);
+    // check if file is Good
+    if(rc == FR_INT_ERR)
+    { // only option is to close file
+        rc = f_close(&fil);
+        if(rc == FR_INVALID_OBJECT)
+        { Serial.println("unlinking file");
+          rc = f_unlink(wfilename);
+          if (rc) die("unlink", rc);
+        }
+        else
+          die("close", rc);
+        
+    }
+    // retry open file
+    rc = f_open(&fil, wfilename, FA_WRITE | FA_CREATE_ALWAYS);
+    if(rc) die("open", rc);
+    
     isFileOpen=1;
     t0=micros();
   }
@@ -121,7 +146,13 @@ void loop()
      if(!(count%640)) SERIALX.println(); SERIALX.flush();
      //
      rc = f_write(&fil, buffer, BUFFSIZE, &wr);
-     if (rc) die("write", rc);  
+     if (rc== FR_DISK_ERR) // IO error
+     {  Serial.println(" write FR_DISK_ERR");
+        // only option is to close file
+        // force closing file
+        count=1000;
+     }
+     else if(rc) die("write",rc);
     //    
      count %= 1000;
   }    

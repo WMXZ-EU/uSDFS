@@ -24,8 +24,17 @@
  */
 //diskio.c
 
+#include  <stdint.h>
+
+#include "uSDconfig.h"
+#include "uSDif.h"
 #include "diskio.h"
+
+#if defined __MK66FX1M0__ || defined __MK64FX512__
 #include "sdhc.h"
+#endif
+
+#include "sdcard.h"
 
 #define USB_DEBUG
 #undef USB_DEBUG
@@ -33,6 +42,8 @@
 void logg(char c);
 #endif
 
+
+extern diskIO_t uSDdisks[];
 /******************************************************************************
 *
 *   Public functions
@@ -44,16 +55,33 @@ void logg(char c);
 // SCOPE:       SD Card public related function
 // DESCRIPTION: Function initialize the disk
 //              
-// PARAMETERS:  drv - Physical drive nmuber (0)
+// PARAMETERS:  drv - Physical drive nmuber (0,1)
 //              
 // RETURNS:     status of initialization(OK, nonInit, noCard, CardProtected)
 //-----------------------------------------------------------------------------  
 DSTATUS disk_initialize (BYTE drv)
 {
-  if(drv)
-    return RES_PARERR;
- 
-  return SDHC_InitCard();
+	DSTATUS stat;
+	int result;
+
+	switch(uSDdisks[drv].dev)
+	{
+		case uSDspi:
+			sdspi_setup(drv);
+			result = SDInit();			// returns 0 if initialize worked properly
+			// translate the result code here
+			if	    (result == SDCARD_NO_DETECT)  stat = STA_NODISK;
+			else if (result == SDCARD_TIMEOUT)  stat = STA_NOINIT;
+			else if (result == SDCARD_NOT_REG)  stat = STA_NODISK;		// not strictly true, but...
+			else								stat = 0;
+			return stat;
+#if defined __MK66FX1M0__ || defined __MK64FX512__
+		case uSDsdhc:
+			return SDHC_InitCard();
+#endif
+		default:
+			return RES_PARERR;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -67,10 +95,25 @@ DSTATUS disk_initialize (BYTE drv)
 //-----------------------------------------------------------------------------
 DSTATUS disk_status (BYTE drv)
 {
-  if(drv)
-    return RES_PARERR;
+	DSTATUS stat;
+	int result;
 
-  return SDHC_GetStatus();
+	switch(uSDdisks[drv].dev)
+	{
+		case uSDspi:
+			sdspi_select(drv);
+			result = SDStatus();
+			// translate the reslut code here
+			if (result == SDCARD_OK)  stat = 0;
+			else  stat = STA_NODISK;				// incomplete; need to allow for write-protect
+			return stat;
+#if defined __MK66FX1M0__ || defined __MK64FX512__
+		case uSDsdhc:
+			return SDHC_GetStatus();
+#endif
+		default:
+			return RES_PARERR;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -88,31 +131,59 @@ DSTATUS disk_status (BYTE drv)
 DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 {
 	DRESULT rc;		
-	if(drv || (count == 0))
-	return RES_PARERR;
+	DRESULT			res;
+	int32_t			result;
 
-#if MULTI_SECTOR == 1
-	SDHC_DMAWait();	// make sure uSD card is not busy
-	rc= SDHC_ReadBlocks(buff, sector, count);
-	SDHC_DMAWait();
-#else
-	BYTE*ptr=(BYTE *)buff;
-	for(;count;count--)
+	if(count == 0)	return RES_PARERR;
+	
+	switch(uSDdisks[drv].dev)
 	{
-		rc= SDHC_ReadBlocks(ptr, sector, 1);
-		if(rc != RES_OK) break;
-		ptr+=512; sector++;
-		SDHC_DMAWait();
-	}
+		case uSDspi:
+			res = RES_OK;			// assume this works
+			sdspi_select(drv);
+			while(sd_waitforready());
+			while (count)
+			{
+				result = SDReadBlock(sector, buff);
+				if (result != SDCARD_OK)
+				{
+					res = RES_ERROR;
+					break;
+				}
+				sector++;
+				count--;
+				buff = buff + 512;		// SD card library uses sector size of 512; FatFS better, also!
+			}
+			// translate the reslut code here
+			return res;
+#if defined __MK66FX1M0__ || defined __MK64FX512__
+		case uSDsdhc:
+			#if MULTI_SECTOR == 1
+				SDHC_DMAWait();	// make sure uSD card is not busy
+				rc= SDHC_ReadBlocks(buff, sector, count);
+				SDHC_DMAWait();
+			#else
+				BYTE*ptr=(BYTE *)buff;
+				for(;count;count--)
+				{
+					rc= SDHC_ReadBlocks(ptr, sector, 1);
+					if(rc != RES_OK) break;
+					ptr+=512; sector++;
+					SDHC_DMAWait();
+				}
+			#endif
+				return rc;
 #endif
-	return rc;
+		default:
+			return RES_PARERR;
+	}
 }
 
 #if	_READONLY == 0
 //-----------------------------------------------------------------------------
 // FUNCTION:    disk_write
 // SCOPE:       SD Card public related function
-// DESCRIPTION: Function write block/blocks to disk
+// DESCRIPTION: Function write block/blocks to disk with wait for completion
 //              
 // PARAMETERS:  drv - Physical drive nmuber (0)
 //              buff - pointer on buffer where write data are prepared
@@ -124,26 +195,55 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 {
 	DRESULT rc;	
-	if(drv || (count == 0))
-	return RES_PARERR;
+	DRESULT			res;
+	int32_t			result;
 
-#if MULTI_SECTOR == 1
-	SDHC_DMAWait();	// make sure uSD card is not busy
-	rc= SDHC_WriteBlocks((BYTE*)buff, sector, count);
-#if WRITE_SYNCHRONIZE==1
-	SDHC_DMAWait();
-#endif
-#else
-	BYTE *ptr=(BYTE *)buff;
-	for(;count;count--)
-	{ 	rc= SDHC_WriteBlocks(ptr, sector, 1);
-		if(rc != RES_OK) break;
-		ptr+=512; sector++;
-		SDHC_DMAWait();
-	}
-#endif
+	if(count == 0)	return RES_PARERR;
 
+	switch(uSDdisks[drv].dev)
+	{
+		case uSDspi:
+			res = RES_OK;			// assume this works
+			sdspi_select(drv);
+			while(sd_waitforready());
+			// translate the arguments here
+			while (count)
+			{
+				result = SDWriteBlock(sector, (uint8_t *)buff);
+				if (result != SDCARD_OK)
+				{
+					res = RES_ERROR;
+					break;
+				}
+				sector++;
+				count--;
+				buff = buff + 512;			// SD card library uses sector size of 512; FatFS better, also!
+			}
+			// translate the result code here
+			return res;
+#if defined __MK66FX1M0__ || defined __MK64FX512__
+		case uSDsdhc:
+			#if MULTI_SECTOR == 1
+				SDHC_DMAWait();	// make sure uSD card is not busy
+				rc= SDHC_WriteBlocks((BYTE*)buff, sector, count);
+			#if WRITE_SYNCHRONIZE==1
+				SDHC_DMAWait();
+			#endif
+			#else
+				BYTE *ptr=(BYTE *)buff;
+				for(;count;count--)
+				{ 	rc= SDHC_WriteBlocks(ptr, sector, 1);
+					if(rc != RES_OK) break;
+					ptr+=512; sector++;
+					SDHC_DMAWait();
+				}
+			#endif
 	return rc;
+#endif
+
+		default:
+			return RES_PARERR;
+	}
 }
 #endif
 
@@ -161,72 +261,112 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 DRESULT disk_ioctl (BYTE drv, BYTE ctrl, void* buff)
 {
   DRESULT result = RES_OK;
-  
-  if(drv)
-    return RES_PARERR;
-  
-  switch(ctrl)
-  {
-    case CTRL_SYNC:
-      /*
-      Make sure that the disk drive has finished pending write process. 
-      When the disk I/O module has a write back cache, flush the dirty sector 
-      immediately. This command is not used in read-only configuration.
-      */
-      // in polling mode I know that all writes operations are finished!
-      break;
-    case GET_SECTOR_SIZE:
-      /*
-      Returns sector size of the drive into the WORD variable pointed by Buffer.
-      This command is not used in fixed sector size configuration, 
-      _MAX_SS is 512.
-      */
-      if(buff == NULL)
-        result = RES_PARERR;
-      else
-        *(LWord*)buff = SDHC_BLOCK_SIZE;
-      
-      break;
-    case GET_SECTOR_COUNT:
-      /*
-      Returns number of available sectors on the drive into the DWORD variable
-      pointed by Buffer. This command is used by only f_mkfs function to 
-      determine the volume size to be created.
-      */
-      if(buff == NULL)
-        result = RES_PARERR;
-      else
-        *(LWord*)buff = SDHC_GetBlockCnt();
-      break;
-    case GET_BLOCK_SIZE:
-      /*
-      Returns erase block size of the flash memory in unit of sector into the 
-      DWORD variable pointed by Buffer. The allowable value is 1 to 32768 in 
-      power of 2. Return 1 if the erase block size is unknown or disk devices. 
-      This command is used by only f_mkfs function and it attempts to align data
-      area to the erase block boundary.
-      */
-      result = RES_PARERR;
-      break;
-#ifdef OLD_IOCTL
-    case CTRL_ERASE_SECTOR:
-      /*
-      Erases a part of the flash memory specified by a DWORD array 
-      {<start sector>, <end sector>} pointed by Buffer. When this feature is not
-      supported or not a flash memory media, this command has no effect. The 
-      FatFs does not check the result code and the file function is not affected
-      even if the sectors are not erased well. This command is called on 
-      removing a cluster chain when _USE_ERASE is 1.
-      */
-      result = RES_PARERR;
-      break;
+	DRESULT res;
+
+	switch(uSDdisks[drv].dev)
+	{
+		//------------------------------------------ spi ----------------------------------------
+		case uSDspi:
+			res = RES_OK;
+			sdspi_select(drv);
+			while(sd_waitforready());
+			switch (ctrl)
+			{
+				case CTRL_SYNC:
+				res = RES_OK;				// write-cache flushing is done automatically for SD card
+				break;
+
+				case GET_SECTOR_COUNT :	  // Get number of sectors on the disk (DWORD)
+				res = RES_PARERR;
+				break;
+
+				case GET_SECTOR_SIZE :	  // Get R/W sector size (WORD)
+				*(WORD*)buff = 512;
+				res = RES_OK;
+				break;
+
+				case GET_BLOCK_SIZE :	    // Get erase block size in unit of sector (DWORD)
+				*(DWORD*)buff = 1;
+				res = RES_OK;
+				break;
+
+				default:
+				res = RES_PARERR;			// no idea what he wants, throw an error
+				break;
+			}
+
+			// post-process here
+			return res;
+			//------------------------------------------ sdhc ----------------------------------------
+#if defined __MK66FX1M0__ || defined __MK64FX512__
+			case uSDsdhc:
+				  switch(ctrl)
+				  {
+				    case CTRL_SYNC:
+				      /*
+				      Make sure that the disk drive has finished pending write process.
+				      When the disk I/O module has a write back cache, flush the dirty sector
+				      immediately. This command is not used in read-only configuration.
+				      */
+				      // in polling mode I know that all writes operations are finished!
+				      break;
+				    case GET_SECTOR_SIZE:
+				      /*
+				      Returns sector size of the drive into the WORD variable pointed by Buffer.
+				      This command is not used in fixed sector size configuration,
+				      _MAX_SS is 512.
+				      */
+				      if(buff == NULL)
+				        result = RES_PARERR;
+				      else
+				        *(LWord*)buff = SDHC_BLOCK_SIZE;
+
+				      break;
+				    case GET_SECTOR_COUNT:
+				      /*
+				      Returns number of available sectors on the drive into the DWORD variable
+				      pointed by Buffer. This command is used by only f_mkfs function to
+				      determine the volume size to be created.
+				      */
+				      if(buff == NULL)
+				        result = RES_PARERR;
+				      else
+				        *(LWord*)buff = SDHC_GetBlockCnt();
+				      break;
+				    case GET_BLOCK_SIZE:
+				      /*
+				      Returns erase block size of the flash memory in unit of sector into the
+				      DWORD variable pointed by Buffer. The allowable value is 1 to 32768 in
+				      power of 2. Return 1 if the erase block size is unknown or disk devices.
+				      This command is used by only f_mkfs function and it attempts to align data
+				      area to the erase block boundary.
+				      */
+				      result = RES_PARERR;
+				      break;
+				#ifdef OLD_IOCTL
+				    case CTRL_ERASE_SECTOR:
+				      /*
+				      Erases a part of the flash memory specified by a DWORD array
+				      {<start sector>, <end sector>} pointed by Buffer. When this feature is not
+				      supported or not a flash memory media, this command has no effect. The
+				      FatFs does not check the result code and the file function is not affected
+				      even if the sectors are not erased well. This command is called on
+				      removing a cluster chain when _USE_ERASE is 1.
+				      */
+				      result = RES_PARERR;
+				      break;
+				#endif
+				    case CTRL_DMA_STATUS:
+						*((uint16_t*)buff) = SDHC_DMADone();
+				      break;
+				    default:
+				      return RES_PARERR;
+				  }
+				  break;
 #endif
-    case CTRL_DMA_STATUS:
-		*((uint16_t*)buff) = SDHC_DMADone();
-      break;
-    default:
-      return RES_PARERR;
-    
-  }
-  return result;
+
+		default:
+			return RES_PARERR;
+	}
+	return result;
 }

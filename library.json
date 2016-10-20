@@ -2,9 +2,9 @@
 	"name": "uSDFS",
 	"frameworks": "Arduino",
 	"platforms": "Teensy 3.6",
-	"keywords": "FileSystem, SDIO, exFAT, FAT32",
+	"keywords": "FileSystem, exFAT, FAT32,  SDIO, SPI",
 	"description": "WMXZ uSDFS Library",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"authors":
 	{	"name": "Walter Zimmer",
 		"maintainer": true

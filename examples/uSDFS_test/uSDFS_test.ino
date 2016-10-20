@@ -38,18 +38,21 @@ char * tchar2char( TCHAR * tcharString, int nn, char * charString)
     return charString;
 }
 
+/****************** setup ******************************/
 void setup() {
   // put your setup code here, to run once:
 
   while(!SERIALX);
   #ifndef USB_SERIAL
-	SERIALX.begin(115200,SERIAL_8N1_RXINV_TXINV);
+  	SERIALX.begin(115200,SERIAL_8N1_RXINV_TXINV);
   #endif
   SERIALX.println("uSDFS");
 
-  f_mount (&fatfs, (TCHAR*)_T("/"), 0);      /* Mount/Unmount a logical drive */
+  // 0: is first disk (configured in diskconfig.h)
+  TCHAR *device = (TCHAR *)_T("0:/");
+  
+  f_mount (&fatfs, device, 0);      /* Mount/Unmount a logical drive */
 
-Serial.printf("%d %d %d %d\n\r",fatfs.fs_type,_LFN_UNICODE, _FS_EXFAT, sizeof(TCHAR));
   //-----------------------------------------------------------
   SERIALX.println("\nCreate a new file (hello10.txt).");
   rc = f_open(&fil, (TCHAR*)_T("HELLO10.TXT"), FA_WRITE | FA_CREATE_ALWAYS);
@@ -75,7 +78,7 @@ Serial.printf("%d %d %d %d\n\r",fatfs.fs_type,_LFN_UNICODE, _FS_EXFAT, sizeof(TC
   for (;;) 
   {
       if(!f_gets(buff, sizeof(buff), &fil)) break; /* Read a string from file */
-      SERIALX.printf("%s",buff);
+      SERIALX.printf("%s",tchar2char(buff,80,text));
 }
   if (rc) die("Gets",rc);
 
@@ -128,6 +131,9 @@ Serial.printf("%d %d %d %d\n\r",fatfs.fs_type,_LFN_UNICODE, _FS_EXFAT, sizeof(TC
   SERIALX.println("\nTest completed.");
 }
 
+/****************** loop ******************************/
 void loop() {
   // put your main code here, to run repeatedly:
 }
+
+

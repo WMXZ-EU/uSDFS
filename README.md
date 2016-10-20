@@ -12,7 +12,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
     
 ###- 30-jun-2016
 	*First release V1.0.0
-		*multi-buffer operation fixed
+		** multi-buffer operation fixed
 	
 ###- 08-july-2016
 	*Working release
@@ -22,14 +22,14 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 ###- 25-jul-2016
 	*upgraded to CHaN's ff12a version as of 25-July
 	*default configuration is now with exFAT
-		* implies use of LFN
-		* requires use of unicode
+		** implies use of LFN
+		** requires use of unicode
 
 ###- 09-aug-2016
 	* symbols aligned with Teensyduino_1.29
 
 ###- 12-sept-2016
-	* version 1.0.2
+	* Version 1.0.2
 	* upgraded to ELM-CHaN's ff12b
 	* cleaned sdio.c
 	* added cmd6 switch for high speed sdio
@@ -38,5 +38,14 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 ###- 21-sept-2016
 	* -fshort-wchar  addition in boards.txt is NOT neeeded any more
 	* changing _T(x) macro to #define _T(x) u ## x in ff.h does the job  (u compiler directive indicate 16 bit)
-	
 
+###- 20-oct-2016
+	* Version 1.0.3
+	* added basic SPI support (8/16 bit FIFO)
+	* User should edit src/uSDconfig.h to configure multiple uSD cards for both SPI (all teensies) and 4-Bit SDIO (T3.5/3.6 only)
+	* multiple disks (mix of spi and sdio) are possible
+	* do be done: 
+		** multi record operations for SPI
+		** variable speed settings for SPI (similar to begin/end transactions)
+		** DMA support for SPI
+	

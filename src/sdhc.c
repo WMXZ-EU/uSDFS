@@ -33,6 +33,7 @@
 
 #include "kinetis.h"
 #include "core_pins.h" // testing only
+#ifdef __MK66FX1M0__
 
 // Missing in Teensyduino 1.29
 #ifndef MPU_CESR_VLD_MASK
@@ -204,7 +205,7 @@ DSTATUS SDHC_InitCard(void)
 	if(SDHC_DO4BITS)
 	{
 		// Set 4 bit data bus width
-		if(!(sdhc_CMD(SDHC_CMD55_XFERTYP,sdCardDesc.address) && sdhc_CMD(SDHC_ACMD6_XFERTYP,2)))		SDHC_ERROR(STA_NOINIT, SD_CARD_ERROR_ACMD6);
+		if(!(sdhc_CMD(SDHC_CMD55_XFERTYP,sdCardDesc.address) && sdhc_CMD(SDHC_ACMD6_XFERTYP,2))) SDHC_ERROR(STA_NOINIT, SD_CARD_ERROR_ACMD6);
 
 		// Set Data bus width also in SDHC controller
 		SDHC_PROCTL &= (~ SDHC_PROCTL_DTW_MASK);
@@ -354,6 +355,7 @@ static uint32_t sdhc_waitCommandReady(void)
 //-----------------------------------------------------------------------------  
 static DSTATUS sdhc_Init(void)
 {
+
 #ifdef HAS_KINETIS_MPU
 	  // Allow SDHC Bus Master access. (from Bill Greiman)
 	  MPU_RGDAAC0 |= 0x0C000000;
@@ -622,3 +624,4 @@ static DRESULT sdhc_CMD12_StopTransferWaitForBusy(void)
 	if(!timeOut) return RES_NONRSPNS;
 	return RES_OK;
 }
+#endif
