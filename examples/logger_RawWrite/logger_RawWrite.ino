@@ -1,5 +1,5 @@
 //Copyright 2016 by Walter Zimmer
-// Version 09-09-16
+// Version 20-10-16
 //
 #include "ff.h"
 
@@ -48,7 +48,7 @@ char * tchar2char(  TCHAR * tcharString, size_t nn, char * charString)
 
 //=========================================================================
 uint32_t count=0;
-uint32_t ifn=2; // to test corrupted file (should be 0)
+uint32_t ifn=0;
 uint32_t isFileOpen=0;
 char filename[80];
 TCHAR wfilename[80];
@@ -58,27 +58,24 @@ uint32_t t1=0;
 
 void setup()
 {
+  // wait for serial line to come up
   pinMode(13,OUTPUT);
-  pinMode(13,LOW);
-  while(!SERIALX);
   pinMode(13,HIGH);
+  while(!SERIALX) { digitalWriteFast(13,!digitalReadFast(13)); delay(100);}
   
   #ifndef USB_SERIAL
-	SERIALX.begin(115200,SERIAL_8N1_RXINV_TXINV);
+  	SERIALX.begin(115200,SERIAL_8N1_RXINV_TXINV);
   #endif
   SERIALX.println("\nLogger_test");
+  SERIALX.printf("F_BUS %d MHz\n\r",F_BUS/1000000);
 
-  f_mount (&fatfs, (TCHAR *)_T("/"), 0);      /* Mount/Unmount a logical drive */
+  f_mount (&fatfs, (TCHAR *)_T("0:/"), 0);      /* Mount/Unmount a logical drive */
 }
 
 void loop()
 {
-  if(ifn>MXFN) 
-  { pinMode(13,OUTPUT);
-    digitalWrite(13,HIGH); 
-    delay(100); 
-    digitalWrite(13,LOW); 
-    delay(100); 
+  if(ifn>MXFN) // nothing to do, blink only
+  { digitalWriteFast(13,!digitalReadFast(13)); delay(100);}
     return;
   }
   
@@ -103,7 +100,7 @@ void loop()
   {
     // open new file
     ifn++;
-    if(ifn>MXFN) return;
+    if(ifn>MXFN) { pinMode(13,OUTPUT); return; } // at end of test: prepare for blinking
 
     sprintf(filename,"X_%05d.dat",ifn);
     SERIALX.println(filename);
