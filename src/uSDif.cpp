@@ -87,7 +87,8 @@ void sdspi_setup(uint16_t dev)
 
   sckfreqkhz = 400;       // use slow initial SPI clock
   finalclk = SPIInit(iodev, sckfreqkhz, SPI_BITS);
-#ifdef USD_IF_INFO ==1
+
+#if USE_IF_INFO == 1
   Serial.printf("\n\rSPI connected at %d kHz.", finalclk);
 #endif
 
@@ -96,7 +97,7 @@ void sdspi_setup(uint16_t dev)
 
   sckfreqkhz = SPI_CLOCK_KHZ;       // switch to fast SPI clock
   finalclk = SPIInit(iodev, sckfreqkhz, SPI_BITS);
-#ifdef USD_IF_INFO ==1
+#if USE_IF_INFO ==1
   Serial.printf("\n\rSPI connected at %d kHz.\n\r", finalclk);
 #endif
 
@@ -173,8 +174,8 @@ static void xferBulk(char  *inp, char *out, uint16_t nbytes)
 */
 	/** fifo based bulk transfer */
 #if SPI_USE_16BITS == 1
-	if(!SPITransferBlock16(m_dev, inp, out, nbytes)) Serial.println("Error: 16-bit bulk transfer");
+	if(!SPIExchangeBlock16(m_dev, inp, out, nbytes)) Serial.println("Error: 16-bit bulk transfer");
 #else
-	SPITransferBlock(m_dev, inp, out, nbytes);
+	SPIExchangeBlock(m_dev, inp, out, nbytes);
 #endif
 }

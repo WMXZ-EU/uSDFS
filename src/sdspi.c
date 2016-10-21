@@ -49,6 +49,9 @@ static KINETISK_SPI_t *SPI[] = {(KINETISK_SPI_t *)0x4002C000, (KINETISK_SPI_t *)
 #endif  // SPI_SR_RXCTR
 
 
+#define SWAP(x) (((x>>8) & 0x00FF) | ((x & 0x00FF)<<8))
+
+
 // following ctarTAB adapted from SPI
 typedef struct {
 	uint16_t div;
@@ -81,8 +84,6 @@ const CTAR_TAB_t ctarTab[23] =
 	{640,	SPI_CTAR_PBR(2) | SPI_CTAR_BR(7) | SPI_CTAR_CSSCK(6)},
 	{768,	SPI_CTAR_PBR(1) | SPI_CTAR_BR(8) | SPI_CTAR_CSSCK(7)}
 } ;
-
-
 
 uint32_t core_clk_khz = (F_BUS/1000);
 /*
@@ -200,9 +201,11 @@ uint32_t  SPIExchange16(uint32_t  spinum, uint32_t  c)
 //	c = SPI_POPR_REG(spi);
 
 	SPI[spinum]->SR = SPI_SR_TCF;
-	SPI[spinum]->PUSHR = SPI_PUSHR_TXDATA((uint16_t)c) |  SPI_PUSHR_CTAS(1) ;
+	uint16_t w = SWAP((uint16_t)c);
+	SPI[spinum]->PUSHR = SPI_PUSHR_TXDATA(w) |  SPI_PUSHR_CTAS(1) ;
 	while (!(SPI[spinum]->SR & SPI_SR_RXCTR));
-	c = SPI[spinum]->POPR;
+	w = SPI[spinum]->POPR;
+	c=SWAP(w);
 
 	return  c;
 }
@@ -210,41 +213,7 @@ uint32_t  SPIExchange16(uint32_t  spinum, uint32_t  c)
 /****************************************TEST************************************************/
 #define SPI_INITIAL_FIFO_DEPTH 3
 
-/** SPI receive a byte */
-uint8_t SPIReceive(int16_t port)
-{
-	SPI[port]->MCR |= SPI_MCR_CLR_RXF;
-	SPI[port]->SR = SPI_SR_TCF;
-	SPI[port]->PUSHR = 0xFF;
-	while (!(SPI[port]->SR & SPI_SR_TCF)) {}
-	return SPI[port]->POPR;
-}
-/** SPI send a byte */
-void SPISend(int16_t port, uint8_t b)
-{
-	SPI[port]->MCR |= SPI_MCR_CLR_RXF;
-	SPI[port]->SR = SPI_SR_TCF;
-	SPI[port]->PUSHR = b;
-	while (!(SPI[port]->SR & SPI_SR_TCF)) {}
-}
-
-uint8_t SPITransfer(int16_t port, uint8_t data)
-{
-	SPI[port]->SR = SPI_SR_TCF;
-	SPI[port]->PUSHR = data;
-	while (!(SPI[port]->SR & SPI_SR_TCF)) ; // wait
-	return SPI[port]->POPR;
-}
-uint16_t SPITransfer16(int16_t port, uint16_t data)
-{
-	SPI[port]->SR = SPI_SR_TCF;
-	SPI[port]->PUSHR = data | SPI_PUSHR_CTAS(1);
-	while (!(SPI[port]->SR & SPI_SR_TCF)) ; // wait
-	return SPI[port]->POPR;
-}
-
-
-void SPITransferBlock(int16_t port, void *inpbuf, void *outbuf, size_t count)
+void SPIExchangeBlock(int16_t port, void *inpbuf, void *outbuf, size_t count)
 {	int ii;
 
 		if (count == 0) return;
@@ -323,9 +292,8 @@ void SPITransferBlock(int16_t port, void *inpbuf, void *outbuf, size_t count)
 	    }
 }
 
-#define SWAP(x) (((x>>8) & 0x00FF) | ((x & 0x00FF)<<8))
 
-uint16_t SPITransferBlock16(int16_t port, void *inpbuf, void *outbuf, size_t count)
+uint16_t SPIExchangeBlock16(int16_t port, void *inpbuf, void *outbuf, size_t count)
 { 	int ii;
 	uint16_t *inp=(uint16_t *)inpbuf;
 	uint16_t *out=(uint16_t *)outbuf;

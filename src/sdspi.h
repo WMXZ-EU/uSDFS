@@ -124,8 +124,8 @@ uint32_t	SPIExchange16(uint32_t  spinum, uint32_t  c);
 /*
  *  Block transfer routines that may use FIFO (only SPI0)
  */
-void	SPITransferBlock(int16_t port, void *inpbuf, void *outbuf, size_t count);
-uint16_t SPITransferBlock16(int16_t port, void *inpbuf, void *outbuf, size_t count);
+void	SPIExchangeBlock(int16_t port, void *inpbuf, void *outbuf, size_t count);
+uint16_t SPIExchangeBlock16(int16_t port, void *inpbuf, void *outbuf, size_t count);
 
 /*
  *  Bit bang routines
