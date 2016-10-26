@@ -116,6 +116,7 @@ DSTATUS disk_status (BYTE drv)
 	}
 }
 
+#define OlD_VER 0
 //-----------------------------------------------------------------------------
 // FUNCTION:    disk_read
 // SCOPE:       SD Card public related function
@@ -142,6 +143,25 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 			res = RES_OK;			// assume this works
 			sdspi_select(drv);
 			while(sd_waitforready());
+#if MULTI_SECTOR == 1
+#if OLD_VER == 0
+			if(count==1)
+			{
+				result = SDReadBlock(sector, buff);
+				if (result != SDCARD_OK)
+				{	res = RES_ERROR;
+					break;
+				}
+			}
+			else
+			{
+				result = SDReadBlocks(sector, buff,count);
+				if (result != SDCARD_OK)
+				{	res = RES_ERROR;
+					break;
+				}
+			}
+#else
 			while (count)
 			{
 				result = SDReadBlock(sector, buff);
@@ -154,7 +174,22 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 				count--;
 				buff = buff + 512;		// SD card library uses sector size of 512; FatFS better, also!
 			}
-			// translate the reslut code here
+#endif
+#else
+			while (count)
+			{
+				result = SDReadBlock(sector, buff);
+				if (result != SDCARD_OK)
+				{
+					res = RES_ERROR;
+					break;
+				}
+				sector++;
+				count--;
+				buff = buff + 512;		// SD card library uses sector size of 512; FatFS better, also!
+			}
+#endif
+			// translate the result code here
 			return res;
 #if defined __MK66FX1M0__ || defined __MK64FX512__
 		case uSDsdhc:
@@ -177,6 +212,7 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 		default:
 			return RES_PARERR;
 	}
+	return RES_ERROR; // we have not done anything
 }
 
 #if	_READONLY == 0
@@ -206,6 +242,41 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 			res = RES_OK;			// assume this works
 			sdspi_select(drv);
 			while(sd_waitforready());
+#if MULTI_SECTOR == 1
+#if OLD_VER == 0
+			if(count==1)
+			{
+				result = SDWriteBlock(sector, (uint8_t *)buff);
+				if (result != SDCARD_OK)
+				{
+					res = RES_ERROR;
+					break;
+				}
+
+			}
+			else
+			{
+				result = SDWriteBlocks(sector, buff,count);
+				if (result != SDCARD_OK)
+				{	res = RES_ERROR;
+					break;
+				}
+			}
+#else
+			while (count)
+			{
+				result = SDWriteBlock(sector, (uint8_t *)buff);
+				if (result != SDCARD_OK)
+				{
+					res = RES_ERROR;
+					break;
+				}
+				sector++;
+				count--;
+				buff = buff + 512;			// SD card library uses sector size of 512; FatFS better, also!
+			}
+#endif
+#else
 			// translate the arguments here
 			while (count)
 			{
@@ -219,6 +290,7 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 				count--;
 				buff = buff + 512;			// SD card library uses sector size of 512; FatFS better, also!
 			}
+#endif
 			// translate the result code here
 			return res;
 #if defined __MK66FX1M0__ || defined __MK64FX512__
@@ -244,6 +316,7 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 		default:
 			return RES_PARERR;
 	}
+	return RES_ERROR; // we have not done anything
 }
 #endif
 

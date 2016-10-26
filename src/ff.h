@@ -288,7 +288,6 @@ TCHAR* f_gets (TCHAR* buff, int len, FIL* fp);						/* Get a string from the fil
 
 
 
-
 /*--------------------------------------------------------------*/
 /* Additional user defined functions                            */
 

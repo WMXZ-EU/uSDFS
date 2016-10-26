@@ -18,13 +18,30 @@
 #define  SD_SEND_CID		(0x40 + 10)			/* CMD10 - send CID block (16 bytes) */
 #define  SD_SEND_STATUS		(0x40 + 13)			/* CMD13 - send card status */
 #define  SD_SET_BLK_LEN		(0x40 + 16)			/* CMD16 - set length of block in bytes */
-#define  SD_READ_BLK		(0x40 + 17)			/* read single block */
-#define  SD_WRITE_BLK		(0x40 + 24)			/* write single block */
+#define  SD_READ_BLK		(0x40 + 17)			/* CMD17 read single block */
+#define  SD_WRITE_BLK		(0x40 + 24)			/* CMD24 write single block */
 #define  SD_LOCK_UNLOCK		(0x40 + 42)			/* CMD42 - lock/unlock card */
-#define  CMD55				(0x40 + 55)			/* multi-byte preface command */
 #define  SD_READ_OCR		(0x40 + 58)			/* read OCR */
 #define  SD_ADV_INIT		(0xc0 + 41)			/* ACMD41, for SDHC cards - advanced start initialization */
 #define  SD_PROGRAM_CSD		(0x40 + 27)			/* CMD27 - get CSD block (15 bytes data + CRC) */
+
+#define  SD_READ_MULTI		(0x40 + 18)			/* CMD18 - multi block read */
+#define  SD_WRITE_MULTI		(0x40 + 25)			/* CMD25 - multi block write */
+#define  SD_READ_STOP		(0x40 + 12)			/* CMD12 - stop multi block read */
+
+#define  CMD55	(55)			/* multi-byte preface command */
+/** SET_WR_BLK_ERASE_COUNT - Set the number of write blocks to be
+     pre-erased before writing */
+#define ACMD23	(23)
+
+
+/** ERASE_WR_BLK_START - sets the address of the first block to be erased */
+#define CMD32	(32)
+/** ERASE_WR_BLK_END - sets the address of the last block of the continuous
+    range to be erased*/
+#define CMD33	(33)
+/** ERASE - erase all previously selected blocks */
+#define CMD38	(38)
 
 
 /*
@@ -146,7 +163,7 @@ int32_t	SDRegisterSPI(
  *  SDCARD_RWFAIL means the card returned an unexcpected result during a data
  *  exhange.  This could mean a defective or out-of-spec SD card.
  */
-int32_t					SDInit(void);
+int32_t		SDInit(void);
 
 
 /*
@@ -161,7 +178,7 @@ int32_t					SDInit(void);
  *  if the previous attempt to initialize the card returned some kind of error,
  *  such as timeout or no detect.
  */
-int32_t					SDStatus(void);
+int32_t		SDStatus(void);
 
 
 /*
@@ -175,7 +192,7 @@ int32_t					SDStatus(void);
  *  Upon exit, this routine returns a status code showing the result of
  *  the read operation.
  */
-int32_t					SDReadOCR(uint8_t  *buff);
+int32_t		SDReadOCR(uint8_t  *buff);
 
 
 /*
@@ -190,7 +207,7 @@ int32_t					SDReadOCR(uint8_t  *buff);
  *  Upon exit, this routine returns a status code showing the result of
  *  the read operation.
  */
-int32_t					SDReadCSD(uint8_t  *buff);
+int32_t		SDReadCSD(uint8_t  *buff);
 
 
 /*
@@ -205,7 +222,7 @@ int32_t					SDReadCSD(uint8_t  *buff);
  *  Upon exit, this routine returns a status code showing the result of
  *  the read operation.
  */
-int32_t					SDReadCID(uint8_t  *buff);
+int32_t		SDReadCID(uint8_t  *buff);
 
 
 /*
@@ -225,7 +242,7 @@ int32_t					SDReadCID(uint8_t  *buff);
  *  as copy protection and permanent or temporary write protection.  For
  *  details, refer to the SD Physical Layer Specification.
  */
-int32_t					SDWriteCSD(uint8_t  *buff);
+int32_t		SDWriteCSD(uint8_t  *buff);
 
 
 /*
@@ -235,7 +252,7 @@ int32_t					SDWriteCSD(uint8_t  *buff);
  *  the specified block number in argument blocknum.  The data is written
  *  to the buffer pointed to by argument buff.
  */
-int32_t					SDReadBlock(uint32_t  blocknum, uint8_t  *buff);
+int32_t		SDReadBlock(uint32_t  blocknum, uint8_t  *buff);
 
 
 /*
@@ -245,7 +262,21 @@ int32_t					SDReadBlock(uint32_t  blocknum, uint8_t  *buff);
  *  block number in argument blocknum.  The data is read from the buffer
  *  pointed to by argument buff.
  */
-int32_t					SDWriteBlock(uint32_t  blocknum, uint8_t  *buff);
+int32_t		SDWriteBlock(uint32_t  blocknum, uint8_t  *buff);
+
+/*
+ * addition for multi block operation
+ */
+
+uint32_t SDReadBlocks(uint32_t block, uint8_t* dst, uint32_t count);
+
+uint32_t SDWriteBlocks(uint32_t block, const uint8_t* src, uint32_t count);
+
+uint8_t  sd_waitforready(void);
+
+uint32_t usd_getError(void) ;
+uint32_t usd_getStatus(void) ;
+
 
 #ifdef __cplusplus
 }

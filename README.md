@@ -48,4 +48,13 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 		** multi record operations for SPI
 		** variable speed settings for SPI (similar to begin/end transactions)
 		** DMA support for SPI
+
+###- 26-oct-2016
+	* Version 1.0.4
+	* added multi record operations for SPI (significant speed increase for large buffer read/write)
+	* to be done
+		** consolidations of SPI calls
+		** variable speed settings for SPI (similar to begin/end transactions)
+		** DMA support for SPI
 	
+		

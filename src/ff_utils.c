@@ -27,12 +27,11 @@
 #include <time.h>
 #include "kinetis.h"
 #include "ff.h"
+#include "ff_utils.h"
+
 /*---------------------------------------------------------*/
 /* User Provided Timer Function for FatFs module           */
 /*---------------------------------------------------------*/
-#define EPOCH_YEAR 2000 //T3 RTC
-#define LEAP_YEAR(Y) (((EPOCH_YEAR+Y)>0) && !((EPOCH_YEAR+Y)%4) && ( ((EPOCH_YEAR+Y)%100) || !((EPOCH_YEAR+Y)%400) ) )
-static  const uint8_t monthDays[]={31,28,31,30,31,30,31,31,30,31,30,31}; 
 /*  int  tm_sec;
   int tm_min;
   int tm_hour;
@@ -91,3 +90,17 @@ DWORD get_fattime (void)
 			| ((DWORD)tm.tm_min << 5)
 			| ((DWORD)tm.tm_sec >> 1);
 }
+
+
+TCHAR * char2tchar( char * charString, size_t nn, TCHAR * tcharString)
+{ int ii;
+  for(ii = 0; ii<nn; ii++) tcharString[ii] = (TCHAR) charString[ii];
+  return tcharString;
+}
+
+char * tchar2char(  TCHAR * tcharString, size_t nn, char * charString)
+{ int ii;
+  for(ii = 0; ii<nn; ii++) charString[ii] = (char) tcharString[ii];
+  return charString;
+}
+

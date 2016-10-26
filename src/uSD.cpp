@@ -24,6 +24,11 @@
  */
 //SD.cpp
 
+/*
+ *  attampt to provide SD-type API for uSDFS
+ *  function not tested, it only compiles
+ */
+
 #include <string.h>
 #include "uSD.h"
 
@@ -43,8 +48,8 @@ char * uSDClass::tchar2char(TCHAR * tcharString, size_t nn, char * charString)
 // before other methods are used.
 boolean uSDClass::begin(uint8_t csPin)
 {
-	FRESULT rc;        /* Result code */
-	TCHAR drive[80]; //(TCHAR *)_T("0:/")
+	FRESULT rc;        	/* Result code */
+	TCHAR drive[80];	//(TCHAR *)_T("0:/")
 	rc = f_mount (&fatfs, drive , 0);      /* Mount/Unmount a logical drive */
 	if(rc == FR_OK) return true;
 	return false;

@@ -8,6 +8,10 @@
 #include  <stdio.h>
 #include  <stdlib.h>
 #include  <string.h>
+
+#include "kinetis.h"
+#include "core_pins.h"
+
 #include  "sdcard.h"
 
 #include "sdspi.h"
@@ -17,7 +21,7 @@
 #define  TRUE		!FALSE
 #endif
 
-//void logg(char c);
+void logg(char c);
 
 /*
  *  Externally accessible variables
@@ -503,6 +507,7 @@ int32_t	 SDRegisterSPI(
 }
 
 
+#define DEVELOP 0
 
 /*
  *  SDWriteBlock      write buffer of data to SD card
@@ -542,6 +547,11 @@ int32_t  SDWriteBlock(uint32_t  blocknum, uint8_t  *buff)
 		return  SDCARD_RWFAIL;
 	}
 
+#if DEVELOP == 1
+	if(!usd_writeData(DATA_START_BLOCK,buff)) return SDCARD_RWFAIL;
+#else
+
+	//	DATA_START_BLOCK is 0xFE
 	xchg(0xfe);							// send data token marking start of data block
 
 /*	for (ii=0; ii<512; ii++)				// for all bytes in a sector...
@@ -559,6 +569,7 @@ int32_t  SDWriteBlock(uint32_t  blocknum, uint8_t  *buff)
 		sd_clock_and_release();			// cleanup
 		return  SDCARD_RWFAIL;
 	}
+#endif
 	
 	ii = 0xffffff;							// max timeout  (nasty timing-critical loop!)
 	while (!xchg(0xFF) && (--ii))  ;		// wait until we are not busy
@@ -579,7 +590,7 @@ uint8_t  sd_waitforready(void)
 
 	if (!registered)  return  SDCARD_NOT_REG;
 
-	chipselect();							// enable CS
+	chipselect();						// enable CS
     xchg(0xff);         				// dummy byte
 
 	jj = 5000;
@@ -628,6 +639,7 @@ static  int8_t  sd_send_command(uint8_t  command, uint32_t  arg)
 	}
 
 	sd_clock_and_release();
+
 	chipselect();							// enable CS
 	xchg(0xff);
 
@@ -670,7 +682,7 @@ static  int8_t  sd_send_command(uint8_t  command, uint32_t  arg)
 }
 
 
-static int8_t  sd_wait_for_data(void)
+static int8_t  sd_wait_for_data(void) // similar to usd_waitNotBusy
 {
 	int16_t				ii;
 	uint8_t				rr;
@@ -699,8 +711,420 @@ static void  sd_clock_and_release(void)
 {
 	if (!registered)  return;
 
-	chipdeselect();				   				// release CS
+	chipdeselect();				   			// release CS
 	xchg(0xff);								// send 8 final clocks
 }
 
+
+/**************************************** for multi sector operations **************************/
+/**
+ */
+#include "sdcard_priv.h"
+//
+//--------------------------------- used in uSD (from SDFAT)-----------------------------------
+// should be merged with previous code
+// also one command routine should be removes.
+
+#undef USE_SD_CRC
+
+inline void usd_chipSelectLow()
+{	chipselect();
+}
+
+inline void usd_chipSelectHigh()
+{	chipdeselect();
+	xchg(0xff); // send 8 final clocks
+}
+
+inline void usd_error(uint32_t error){m_usd_error=error;}
+uint32_t usd_getError(void) { return m_usd_error;}
+
+inline void usd_status(uint32_t status){m_usd_status=status;}
+uint32_t usd_getStatus(void) { return m_usd_status;}
+
+
+// wait for card to go not busy
+/**
+ *
+ * @param timeoutMillis
+ * @return
+ */
+uint16_t usd_waitNotBusy(uint16_t timeoutMillis, uint16_t *status)
+{
+	uint16_t t0 = millis();
+	xchg(0xff);
+	while ((*status = xchg(0xff)) != 0XFF)
+	{
+		if (((uint16_t)millis() - t0) >= timeoutMillis)
+		{	goto fail;
+		}
+	}
+	return 1;
+fail:
+	return 0;
+}
+
+/**
+ *
+ * @param cmd
+ * @param arg
+ * @return
+ */
+uint16_t usd_cardCommand(uint8_t cmd, uint32_t arg)
+{
+	int ii;
+	uint16_t status;
+
+	usd_chipSelectLow();
+	// wait if busy
+	if(!usd_waitNotBusy(SD_WRITE_TIMEOUT, &status)) logg('-');
+
+	uint8_t *pa = (uint8_t*)(&arg);
+
+	#if USE_SD_CRC
+	// form message
+		uint8_t d[6] = {cmd | 0X40, pa[3], pa[2], pa[1], pa[0]};
+
+		// add crc
+		d[5] = CRC7(d, 5);
+
+		// send message
+		for (ii = 0; ii < 6; ii++) { xchg(d[ii]); }
+	#else  // USE_SD_CRC
+		// send command
+		xchg(cmd | 0x40);
+
+		// send argument
+		for (ii = 3; ii >= 0; ii--) { xchg(pa[ii]); }
+
+		// send CRC - correct for CMD0 with arg zero or CMD8 with arg 0X1AA
+		xchg(cmd == SD_GO_IDLE ? 0X95 : 0X87);
+	#endif  // USE_SD_CRC
+
+	// skip stuff byte for stop read
+	if (cmd == SD_READ_STOP) { xchg(0xff); }
+
+	// wait for response
+	for (ii = 0; ((status = xchg(0xff)) & 0X80) && ii != 0XFF; ii++) {}
+	return status;
+}
+
+/**
+ *
+ * @param cmd
+ * @param arg
+ * @return
+ */
+uint8_t usd_cardACommand(uint8_t cmd, uint32_t arg)
+{
+	usd_cardCommand(CMD55, 0);
+    return usd_cardCommand(cmd, arg);
+}
+
+/**
+ *
+ * @param dst
+ * @param count
+ * @return
+ */
+uint16_t usd_readData(uint8_t* dst, size_t count)
+{
+	uint16_t status;
+#if USE_SD_CRC
+	uint16_t crc;
+#endif  // USE_SD_CRC
+	// wait for start block token
+	if(!usd_waitNotBusy(SD_READ_TIMEOUT, &status))
+	{
+		usd_error(SD_CARD_ERROR_READ_TIMEOUT);
+		goto fail;
+	}
+
+	if (status != DATA_START_BLOCK)
+	{
+		usd_error(SD_CARD_ERROR_READ);
+		goto fail;
+	}
+	// transfer data
+	xferBulk(dst, 0, count);
+
+#if USE_SD_CRC
+	// get crc
+	crc = (xchg(0xff)<< 8) |xchg(0xff);
+	if (crc != CRC_CCITT(dst, count))
+	{
+		usd_error(SD_CARD_ERROR_READ_CRC);
+		goto fail;
+	}
+#else
+	  // discard crc
+	  xchg(0xff);
+	  xchg(0xff);
+#endif  // USE_SD_CRC
+	usd_chipSelectHigh();
+	return 1;
+fail:
+	usd_chipSelectHigh();
+	return 0;
+}
+
+/**
+ *
+ * @param blockNumber
+ * @return
+ */
+uint16_t usd_readStart(uint32_t blockNumber)
+{
+	if (usd_cardCommand(SD_READ_MULTI, blockNumber))
+	{
+		usd_error(SD_CARD_ERROR_CMD18);
+		goto fail;
+	}
+	usd_chipSelectHigh();
+	return 1;
+
+	fail:
+		usd_chipSelectHigh();
+	return 0;
+}
+
+/**
+ *
+ * @return
+ */
+uint16_t usd_readStop(void)
+{
+	if (usd_cardCommand(SD_READ_STOP, 0))
+	{
+		usd_error(SD_CARD_ERROR_CMD12);
+		goto fail;
+	}
+	usd_chipSelectHigh();
+	return 1;
+
+	fail:
+		usd_chipSelectHigh();
+	return 0;
+}
+
+/**
+ *
+ * @param dst
+ * @return
+ */
+uint16_t usd_readSector(uint8_t* dst)
+{
+	usd_chipSelectLow();
+	return usd_readData(dst, 512);
+}
+
+/**
+ *
+ * @param block
+ * @param dst
+ * @param count
+ * @return
+ */
+uint32_t SDReadBlocks(uint32_t block, uint8_t* dst, uint32_t count)
+{
+	uint16_t ii;
+	if (!usd_readStart(block))	return SDCARD_RWFAIL;
+	for (ii=0; ii < count; ii++, dst += 512)
+	{
+		if (!usd_readSector(dst)) return SDCARD_RWFAIL;
+	}
+	if(!usd_readStop()) return SDCARD_RWFAIL;
+	return SDCARD_OK;
+}
+
+//--------------------- Continuous write -------------------------
+// send one block of data for write block or write multiple blocks
+/**
+ * Multi-block write sequence
+ *   writeStart
+ *   multiple writeSector //calls writeData
+ *   writeStop
+ */
+
+
+/**
+ *
+ * @param token
+ * @param src
+ * @return
+ */
+uint16_t usd_writeData(uint8_t token, const uint8_t* src)
+{
+	uint16_t status;
+	#if USE_SD_CRC
+		uint16_t crc = CRC_CCITT(src, 512);
+	#else  // USE_SD_CRC
+		uint16_t crc = 0XFFFF;
+	#endif  // USE_SD_CRC
+
+	xchg(token);
+	xferBulk(0, (char *) src, 512);
+	xchg(crc >> 8);
+	xchg(crc & 0XFF);
+
+	status = xchg(0xff);
+	if ((status & DATA_RES_MASK) != DATA_RES_ACCEPTED)
+	{
+		usd_error(SD_CARD_ERROR_WRITE);
+		goto fail;
+	}
+	usd_chipSelectHigh();
+	return 1;
+
+fail:
+	usd_chipSelectHigh();
+	return 0;
+}
+
+// the following is only for comparison
+int32_t  _SDWriteBlock(uint32_t  blocknum, uint8_t  *buff)
+{
+	uint32_t				ii;
+	uint8_t					status;
+	uint32_t				addr;
+
+	if (!registered)  return  SDCARD_NOT_REG;
+
+/*
+ *  Compute byte address of start of desired sector.
+ *
+ *  For SD cards, the argument to CMD17 must be a byte address.
+ *  For SDHC cards, the argument to CMD17 must be a block (512 bytes) number.
+ */
+	if (SDType == SDTYPE_SD)  addr = blocknum << 9;	// SD card; convert block number to byte addr
+	else					  addr = blocknum;		// SDHC card; just use blocknum as is
+
+	status = sd_send_command(SD_WRITE_BLK, addr);
+
+	if (status != SDCARD_OK)			// if card does not send back 0...
+	{
+		sd_clock_and_release();			// cleanup
+		return  SDCARD_RWFAIL;
+	}
+
+	if(!usd_writeData(DATA_START_BLOCK,buff)) return SDCARD_RWFAIL;
+
+//	DATA_START_BLOCK is 0xFE
+//	xchg(0xfe);							// send data token marking start of data block
+//
+// /*	for (ii=0; ii<512; ii++)				// for all bytes in a sector...
+//	{
+//    	xchg(*buff++);					// send each byte via SPI
+//	}
+// */
+//	xferBulk(0,buff,512);
+//
+//	xchg(0xff);							// ignore dummy checksum
+//	xchg(0xff);							// ignore dummy checksum
+//
+//	if ((xchg(0xFF) & 0x0F) != 0x05)
+//	{
+//		sd_clock_and_release();			// cleanup
+//		return  SDCARD_RWFAIL;
+//	}
+
+
+	ii = 0xffffff;							// max timeout  (nasty timing-critical loop!)
+	while (!xchg(0xFF) && (--ii))  ;		// wait until we are not busy
+	sd_clock_and_release();				// cleanup
+	return  SDCARD_OK;					// return success
+}
+
+/**
+ *
+ * @param blockNumber
+ * @param eraseCount
+ * @return
+ */
+uint16_t usd_writeStart(uint32_t blockNumber, uint32_t eraseCount)
+{
+	uint32_t				addr;
+
+	// send pre-erase count
+	if(eraseCount)
+	{
+		if (usd_cardACommand(ACMD23, eraseCount))
+		{	usd_error(SD_CARD_ERROR_ACMD23);
+			goto fail;
+		}
+	}
+
+	// use address if not SDHC card
+	if (SDType == SDTYPE_SD)  addr = blockNumber << 9;	// SD card; convert block number to byte addr
+	else					  addr = blockNumber;		// SDHC card; just use blocknum as is
+
+	if (usd_cardCommand(SD_WRITE_MULTI, addr))
+	{	usd_error(SD_CARD_ERROR_CMD25);
+		goto fail;
+	}
+	usd_chipSelectHigh();
+	return 1;
+
+fail:
+	usd_chipSelectHigh();
+	return 0;
+}
+
+/**
+ *
+ * @return
+ */
+uint16_t usd_writeStop(void)
+{
+	uint16_t status;
+	usd_chipSelectLow();
+	if (!usd_waitNotBusy(SD_WRITE_TIMEOUT, &status)) goto fail;
+	xchg(STOP_TRAN_TOKEN);
+	if (!usd_waitNotBusy(SD_WRITE_TIMEOUT, &status)) goto fail;
+	usd_chipSelectHigh();
+	return 1;
+fail:
+	usd_status(status);
+	usd_error(SD_CARD_ERROR_STOP_TRAN);
+	usd_chipSelectHigh();
+	return 0;
+}
+
+/**
+ *
+ * @param src
+ * @return
+ */
+uint16_t usd_writeSector(const uint8_t* src)
+{
+	uint16_t status;
+	usd_chipSelectLow();
+	if (!usd_waitNotBusy(SD_WRITE_TIMEOUT,&status)) { usd_error(SD_CARD_ERROR_WRITE_TIMEOUT); goto fail;}
+	if (!usd_writeData(WRITE_MULTIPLE_TOKEN, src)) { usd_error(SD_CARD_ERROR_WRITE_MULTIPLE); goto fail; }
+	return 1;
+fail:
+	usd_chipSelectHigh();
+	return 0;
+}
+
+
+//------------------------------------------------------------------------------
+/**
+ *
+ * @param block
+ * @param dst
+ * @param count
+ * @return
+ */
+uint32_t SDWriteBlocks(uint32_t block, const uint8_t* src, uint32_t count)
+{
+	uint16_t ii;
+	if (!usd_writeStart(block, 0)) 	return SDCARD_RWFAIL;
+	for (ii = 0; ii < count; ii++, src += 512)
+	{
+		if (!usd_writeSector(src))  return  SDCARD_RWFAIL;
+	}
+	if(!usd_writeStop()) return  SDCARD_RWFAIL;
+	return  SDCARD_OK;
+}
 

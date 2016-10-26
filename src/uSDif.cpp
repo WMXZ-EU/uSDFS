@@ -162,20 +162,20 @@ static  char  xchg(char  c)
 }
 
 
-static void xferBulk(char  *inp, char *out, uint16_t nbytes)
+static void xferBulk(char  *dst, char *src, uint16_t nbytes)
 { 	/** default bulk transfer */
 /*	uint16_t ii;
-	if(out && !inp)
-		for(ii=0;ii<nbytes;ii++) inp[ii] = xchg(0xff);		// read from SPI
-	if(!out && inp)
-		for(ii=0;ii<nbytes;ii++) xchg(out[ii]);				// write to SPI
-	if(out && inp)
-		for(ii=0;ii<nbytes;ii++) inp[ii] = xchg(out[ii]);	// write and read from SPI
+	if(dst && !scr)
+		for(ii=0;ii<nbytes;ii++) dst[ii] = xchg(0xff);		// read from SPI
+	if(!dst && src)
+		for(ii=0;ii<nbytes;ii++) xchg(src[ii]);				// write to SPI
+	if(dst && src)
+		for(ii=0;ii<nbytes;ii++) dst[ii] = xchg(src[ii]);	// write and read from SPI
 */
 	/** fifo based bulk transfer */
 #if SPI_USE_16BITS == 1
-	if(!SPIExchangeBlock16(m_dev, inp, out, nbytes)) Serial.println("Error: 16-bit bulk transfer");
+	if(!SPIExchangeBlock16(m_dev, dst, src, nbytes)) Serial.println("Error: 16-bit bulk transfer");
 #else
-	SPIExchangeBlock(m_dev, inp, out, nbytes);
+	SPIExchangeBlock(m_dev, dst, src, nbytes);
 #endif
 }

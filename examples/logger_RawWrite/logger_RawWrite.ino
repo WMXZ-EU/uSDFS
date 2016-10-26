@@ -2,6 +2,7 @@
 // Version 20-10-16
 //
 #include "ff.h"
+#include "ff_utils.h"
 
 #define USE_USB_SERIAL
 #ifdef USE_USB_SERIAL
@@ -29,22 +30,11 @@ void die(char *str, FRESULT rc);
 void setup();
 void loop();
 
+extern "C" uint32_t usd_getError(void);
 struct tm seconds2tm(uint32_t tt);
 
 void die(char *str, FRESULT rc) 
 { SERIALX.printf("%s: Failed with rc=%u.\n", str, rc); for (;;) delay(100); }
-
-TCHAR * char2tchar( char * charString, size_t nn, TCHAR * tcharString)
-{ int ii;
-  for(ii = 0; ii<nn; ii++) tcharString[ii] = (TCHAR) charString[ii];
-  return tcharString;
-}
-
-char * tchar2char(  TCHAR * tcharString, size_t nn, char * charString)
-{ int ii;
-  for(ii = 0; ii<nn; ii++) charString[ii] = (char) tcharString[ii];
-  return charString;
-}
 
 //=========================================================================
 uint32_t count=0;
@@ -55,13 +45,17 @@ TCHAR wfilename[80];
 uint32_t t0=0;
 uint32_t t1=0;
 
+void blink(uint16_t msec)
+{
+  digitalWriteFast(13,!digitalReadFast(13)); delay(msec);
+}
 
 void setup()
 {
   // wait for serial line to come up
   pinMode(13,OUTPUT);
   pinMode(13,HIGH);
-  while(!SERIALX) { digitalWriteFast(13,!digitalReadFast(13)); delay(100);}
+  while(!SERIALX) blink(100);
   
   #ifndef USB_SERIAL
   	SERIALX.begin(115200,SERIAL_8N1_RXINV_TXINV);
@@ -74,10 +68,7 @@ void setup()
 
 void loop()
 {
-  if(ifn>MXFN) // nothing to do, blink only
-  { digitalWriteFast(13,!digitalReadFast(13)); delay(100);}
-    return;
-  }
+  if(ifn>MXFN) { blink(500); return; }
   
   if(!count)
   {
@@ -144,7 +135,8 @@ void loop()
      //
      rc = f_write(&fil, buffer, BUFFSIZE, &wr);
      if (rc== FR_DISK_ERR) // IO error
-     {  Serial.println(" write FR_DISK_ERR");
+     {  uint32_t usd_error = usd_getError();
+        Serial.printf(" write FR_DISK_ERR : %x\n\r",usd_error);
         // only option is to close file
         // force closing file
         count=1000;
