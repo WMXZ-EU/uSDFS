@@ -7,7 +7,8 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 ###- 26-jun-2016: 
     *Initial upload (K66 4-Bit SDIO)
     *No speed optimization in FAT system
-###- 27-jun-2016
+
+	###- 27-jun-2016
     *work-around to get f_read/f_write working with buffer sizes >= 1024 bytes
     
 ###- 30-jun-2016
@@ -16,6 +17,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	
 ###- 08-july-2016
 	*Working release
+	
 ###- 13-jul-2016
 	*corrected unicode char width (is 32 bit not 16 bit on FRDM K64, not sure for Teensy 3.6)
 
@@ -56,5 +58,8 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 		** consolidations of SPI calls
 		** variable speed settings for SPI (similar to begin/end transactions)
 		** DMA support for SPI
-	
+
+### - 29-oct-2106
+	* work in progress to stabilize use of multi-device settings (e.g. spi and sdhc)
+
 		

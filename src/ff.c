@@ -21,7 +21,25 @@
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of device I/O functions */
 
-//void logg(char c);
+/*
+void logg(char c);
+void printb(unsigned int x);
+void printx(unsigned int x, int nw);
+
+void printBuff(BYTE * buff)
+{
+	int ii,jj;
+	for(ii=0; ii<32; ii++)
+	{
+		for(jj=0; jj<16;jj++)
+		{	unsigned int c = buff[16*ii+jj];
+			printx(c,2);
+		}
+		logg('\r'); logg('\n');
+	}
+	logg('\r'); logg('\n');
+}
+*/
 
 /*--------------------------------------------------------------------------
 
@@ -2962,7 +2980,6 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 	/* Check if the file system object is valid or not */
 	fs = FatFs[vol];					/* Get pointer to the file system object */
 	if (!fs) return FR_NOT_ENABLED;		/* Is the file system object available? */
-
 	ENTER_FF(fs);						/* Lock the volume */
 	*rfs = fs;							/* Return pointer to the file system object */
 
@@ -2976,7 +2993,6 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 			return FR_OK;				/* The file system object is valid */
 		}
 	}
-
 	/* The file system object is not valid. */
 	/* Following code attempts to mount the volume. (analyze BPB and initialize the fs object) */
 
@@ -3261,6 +3277,7 @@ FRESULT f_open (
 	/* Get logical drive */
 	mode &= _FS_READONLY ? FA_READ : FA_READ | FA_WRITE | FA_CREATE_ALWAYS | FA_CREATE_NEW | FA_OPEN_ALWAYS | FA_OPEN_APPEND | FA_SEEKEND;
 	res = find_volume(&path, &fs, mode);
+
 	if (res == FR_OK) {
 		dj.obj.fs = fs;
 		INIT_NAMBUF(fs);
@@ -3455,7 +3472,6 @@ FRESULT f_read (
 	FSIZE_t remain;
 	UINT rcnt, cc, csect;
 	BYTE *rbuff = (BYTE*)buff;
-
 
 	*br = 0;	/* Clear read byte counter */
 	res = validate(&fp->obj, &fs);				/* Check validity of the file object */

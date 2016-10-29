@@ -60,7 +60,7 @@
 #ifdef USB_DEBUG
 /* some aux functions for pure c code */
 #include "usb_serial.h"
-void logg(char c) {usb_serial_putchar(c); usb_serial_flush_output();}
+//void logg(char c) {usb_serial_putchar(c); usb_serial_flush_output();}
 void printb(uint32_t x)
 { char c;
   int ii;
@@ -72,8 +72,21 @@ void printb(uint32_t x)
   usb_serial_putchar('\n');
   usb_serial_flush_output();
 }
+void printx(uint32_t x, int nw)
+{ char c;
+  int ii;
+  for(ii=nw-1;ii>=0;ii--)
+  { if(!((ii+1)%4)) usb_serial_putchar(' ');
+    c= (x>>4*ii) & 0x0f; if(c<10) usb_serial_putchar('0'+c); else usb_serial_putchar('a'+c-10);
+  }
+  usb_serial_putchar(' ');
+//  usb_serial_putchar('\r');
+//  usb_serial_putchar('\n');
+  usb_serial_flush_output();
+}
 /* end aux functions */
 #endif
+//void logg(char c);
 
 SD_CARD_DESCRIPTOR sdCardDesc;
 

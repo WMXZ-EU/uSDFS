@@ -29,7 +29,7 @@
 #include "spiconfig.h"
 
 // some specific types
-typedef enum {uSDspi,uSDsdhc} diskDev_t;
+typedef enum {uSDsdhc, uSDspi} diskDev_t;
 
 typedef struct
 {
@@ -73,9 +73,8 @@ typedef struct
  */
 
 #define USD_DISKS \
-	{	{0,		uSDspi, 	CS_2}, \
-		{0,		uSDspi, 	CS_10}, \
-		{99,	uSDsdhc, 	CS_sdhc} \
+		{0,		uSDspi, 	CS_2}, \
+		{0,		uSDspi, 	CS_10} \
 	}	// is of type diskIO_t
 
 /**

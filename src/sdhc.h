@@ -122,6 +122,7 @@ typedef unsigned char UCHAR; // for legacy
 #define SDHC_USE_ISR	                    1	// must always use Interrupts (needed for CMD6)
 
 #define SDHC_DO4BITS                        1	// use 4 bit bus
+//#define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_SWPOLL
 #define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_DMA
 
 /******************************************************************************
