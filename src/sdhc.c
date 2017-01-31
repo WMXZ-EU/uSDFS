@@ -461,10 +461,10 @@ static DRESULT sdhc_SetBaudrate(uint32_t kbaudrate)
 	while(aux/(16*(1<<ii))>baudrate) ii++;
 	while(aux/(jj*(1<<ii))>baudrate) jj++;
 
-	uint32_t minpresc=ii;
-	uint32_t mindiv=jj-1;
+	uint32_t minpresc = (1<<ii)>>1;
+	uint32_t mindiv   = jj-1;
 
-	m_sdhc_baudrate=F_CPU/((1<<minpresc) * (mindiv+1));
+	m_sdhc_baudrate=F_CPU/((1<<ii) * jj) ;
 
 	// Change dividers
 	sysctl = SDHC_SYSCTL & 
