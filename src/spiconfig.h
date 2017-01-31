@@ -37,9 +37,9 @@
  * 	mosi0	[7,  D2, 2]   [11, C6,  2]  [28,        A16, 2]
  * 	miso0	[8,  D3, 2]   [12, C7,  2]  [39,        A17, 2]
  *
- * 	sck1	[20, D5, 7]   [32, B11, 2]  [sdhc_clk,  E2,  2]
- * 	mosi1	[0,  B16,2]   [21, D6,  7]  [sdhc_dat0, E1,  2] [sdhc_cmd , E3,  7]
- * 	miso1	[1,  B17,2]   [5,  D7,  7]  [sdhc_cmd,  E3,  2] [sdhc_dat0, E1,  7]
+ * 	sck1	[32, B11, 2]  [20, D5,  7]  [sdhc_clk,  E2,  2]
+ * 	mosi1	[0,  B16, 2]  [21, D6,  7]  [sdhc_dat0, E1,  2] [sdhc_cmd , E3,  7]
+ * 	miso1	[1,  B17, 2]  [5,  D7,  7]  [sdhc_cmd,  E3,  2] [sdhc_dat0, E1,  7]
  *
  * 	sck2	[46, B21,2]   [53, D12, 2]
  * 	mosi2	[44, B22,2]   [52, D13, 2]

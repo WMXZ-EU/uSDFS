@@ -58,8 +58,8 @@
  *        MISO = PB0 (Teensy 3.1 pin labeled 37)
  */
 
-#ifndef  SPI_H
-#define  SPI_H
+#ifndef  SDSPI_H
+#define  SDSPI_H
 
 
 /*
