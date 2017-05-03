@@ -46,7 +46,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	* added basic SPI support (8/16 bit FIFO)
 	* User should edit src/uSDconfig.h to configure multiple uSD cards for both SPI (all teensies) and 4-Bit SDIO (T3.5/3.6 only)
 	* multiple disks (mix of spi and sdio) are possible
-	* do be done: 
+	* to be done: 
 		** multi record operations for SPI
 		** variable speed settings for SPI (similar to begin/end transactions)
 		** DMA support for SPI
@@ -62,4 +62,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 ### - 29-oct-2106
 	* work in progress to stabilize use of multi-device settings (e.g. spi and sdhc)
 
+### - 03-may-2107
+	* Version 1.0.5
+	* upgraded to ELM-CHaN's ff12c
 		

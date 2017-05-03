@@ -20,7 +20,7 @@ typedef unsigned int	UINT;
 
 /* This type MUST be 8-bit */
 #ifdef BYTE
-#undef BYTE
+	#undef BYTE
 #endif
 typedef unsigned char	BYTE;
 
@@ -33,7 +33,7 @@ typedef unsigned short	WCHAR;
 typedef long			LONG;
 typedef unsigned long	DWORD;
 
-/* This type MUST be 64-bit (Remove this for C89 compatibility) */
+/* This type MUST be 64-bit (Remove this for ANSI C (C89) compatibility) */
 typedef unsigned long long QWORD;
 
 #endif

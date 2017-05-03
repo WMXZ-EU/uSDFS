@@ -25,3 +25,6 @@ to force UTF16 in exFAT replace in ff.h
 by 
   #define _T(x) u ## x
   #define _TEXT(x) u ## x
+
+convert all option/*.c to option/*.h (to allow arduino compling)
+change accidingly all #include statements in file option/unicode.c
