@@ -183,19 +183,19 @@ void loop()
 /***************************** LOGGING ***********************/
 uint32_t ifn=0;
 #define MXFN 100 // maximal number of files 
-#define MAX_BLOCK_COUNT 1000  // number of 512-byte blocks in file
+#define MAX_BLOCK_COUNT 1000  // number of BUFFSIZE writes to file
 
 #if defined(__MK20DX256__)
   #define BUFFSIZE (8*1024) // size in bytes of buffer to be written
-  #define DISK_BUFFSIZE (2*BUFFSIZE) // size in bytes of buffer to be written
+  #define DISK_BUFFSIZE (2*BUFFSIZE) // size in bytes of memory buffer 
 #elif defined(__MK66FX1M0__)
   #define BUFFSIZE (32*1024) // size in bytes of buffer to be written
-  #define DISK_BUFFSIZE (4*BUFFSIZE) // size in bytes of buffer to be written
+  #define DISK_BUFFSIZE (4*BUFFSIZE) // size in bytes of memory buffer
 #endif
 
 #define INF ((uint32_t) (-1))
 uint8_t Buffer[BUFFSIZE] __attribute__( ( aligned ( 16 ) ) ); // to disk
-uint8_t diskBuffer[DISK_BUFFSIZE] __attribute__( ( aligned ( 16 ) ) ); // storage
+uint8_t diskBuffer[DISK_BUFFSIZE] __attribute__( ( aligned ( 16 ) ) ); // memory storage
 
 uint32_t isFileOpen=0;
 uint32_t t0=0;
