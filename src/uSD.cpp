@@ -75,7 +75,7 @@ boolean uSDClass::exists(const char *filepath)
 {
 	FRESULT rc;        /* Result code */
 	TCHAR drive[80]; //(TCHAR *)_T("0:/")
-
+    rc = FR_OK; // to be done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	if(rc == FR_OK) return true ;
 	return false;
 }
