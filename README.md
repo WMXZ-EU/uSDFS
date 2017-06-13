@@ -13,7 +13,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 
 	### logger_BufferedWrite: use circular buffer for writing to SD cards
 
-	### I2S_logger: acquires data via I2S from ISC43432 microphones and writes data to disk
+	### I2S_logger: acquires data via I2S from ISC43432 microphones and writes data to disk, allows data streaming via USB to PC
 
 # History:
 	### - 26-jun-2016: 
