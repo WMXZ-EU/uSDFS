@@ -22,7 +22,7 @@ uint32_t ifn=0;
   #define DISK_BUFFSIZE (2*BUFFSIZE) // size in bytes of memory buffer 
 #elif defined(__MK66FX1M0__)
   #define BUFFSIZE (32*1024) // size in bytes of buffer to be written
-  #define DISK_BUFFSIZE (4*BUFFSIZE) // size in bytes of memory buffer
+  #define DISK_BUFFSIZE (3*BUFFSIZE) // size in bytes of memory buffer
 #endif
 
 #define INF ((uint32_t) (-1))
@@ -55,7 +55,7 @@ void logger_write(uint8_t *data, uint16_t nbuf)
   //
     // fill disk buffer
     // works only if disk buffer is multiple of nbuf
-    for(int ii=0; ii<nbuf; ii++) diskBuffer[n1_dat+ii]= data[ii]; 
+    for(int ii=0; ii<nbuf; ii++) diskBuffer[(n1_dat+ii) % DISK_BUFFSIZE]= data[ii]; 
         
     n1_dat += nbuf;
     n1_dat %= DISK_BUFFSIZE;
