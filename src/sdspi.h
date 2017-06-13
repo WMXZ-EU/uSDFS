@@ -62,7 +62,7 @@
 #define  SDSPI_H
 
 
-/*
+
 /*
  *  SPIInit      initialize selected SPI channel
  *

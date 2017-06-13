@@ -19,7 +19,7 @@
 
 // alternative
 /*
- * // is already in kinetis.k, so commented
+ *   // is already in kinetis.k, so commented
 typedef struct {
 	volatile uint32_t	MCR;	// 0
 	volatile uint32_t	unused1;// 4

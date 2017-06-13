@@ -43,7 +43,7 @@
 #include "sdcard.h"
 #include "sdspi.h"
 
-extern "C" void logg(char c) { Serial.printf("%c",c); Serial.flush();}
+//extern "C" void logg(char c) { Serial.printf("%c",c); Serial.flush();}
 
 //
 uint32_t kPorts[] = PORT_BASE_PTRS;
