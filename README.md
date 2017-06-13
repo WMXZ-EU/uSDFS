@@ -1,4 +1,3 @@
- -
 # uSDFS
 uSD File system based on ELM-CHaN generic FAT system
 
