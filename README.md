@@ -4,13 +4,9 @@ uSD File system based on ELM-CHaN generic FAT system
 The Teensy library contains a port of ELM_CHaN's generic FAT file system for the PJRC Teensy 3.6 K66 MCU 
 # Examples
 * sdhc_test: basic test the sdio driver of teensy3.6
-
 * uSDFS_test: basic test of uSD File system
-
 * logger_RawWrite: testing writing to SD Cards
-
 * logger_BufferedWrite: use circular buffer for writing to SD cards
-
 * I2S_logger: acquires data via I2S from ISC43432 microphones and writes data to disk, allows data streaming via USB to PC
 
 # History:
