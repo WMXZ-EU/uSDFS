@@ -22,7 +22,7 @@ uint32_t ifn=0;
   #define DISK_BUFFSIZE (2*BUFFSIZE) // size in bytes of memory buffer 
 #elif defined(__MK66FX1M0__)
   #define BUFFSIZE (32*1024) // size in bytes of buffer to be written
-  #define DISK_BUFFSIZE (3*BUFFSIZE) // size in bytes of memory buffer
+  #define DISK_BUFFSIZE (4*BUFFSIZE) // size in bytes of memory buffer
 #endif
 
 #define INF ((uint32_t) (-1))
