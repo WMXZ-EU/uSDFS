@@ -27,8 +27,14 @@
 /****************************************************************************************/
 #include "ICS43432.h" // defines also N_BITS
 
-#define F_SAMP 48000
-
+#define F_SAMP 150000
+// Note: 
+// change either F_CPU or F_SAMP if I2S setup fails to configure
+// i.e. there are no DMA interrupts and 'i2sInProcessing' is not running
+// typically this happens if the clock generation is unstable
+// e.g. F_CPU=168 MHz and F_SAMP = 96000 fails to run
+// but F_CPU=168 MHz and F_SMP = 100000 runs fine
+//
 c_ICS43432 ICS43432;
 
 extern "C" void i2sInProcessing(void * s, void * d);
@@ -52,7 +58,7 @@ c_buff audioStore(audioBuffer,sizeof(audioBuffer));
 AudioInterface  interface(&audioStore,F_SAMP);
 AudioOutputUSB  usb;
 AudioConnection patchCord1(interface,0,usb,0);
-AudioConnection patchCord2(interface,1,usb,1); // comment for mono
+//AudioConnection patchCord2(interface,1,usb,1); 
 #endif
 
 //============================ Asynchronous Blink =============================================
@@ -110,6 +116,18 @@ void c_myApp::loop()
   if(logger_save() == (uint32_t)-1)
   { ICS43432.stop(); Serial.println("stopped");pinMode(13,OUTPUT); appState=1; return;}
 #endif
+
+  static uint32_t t0=0;
+  uint32_t t1=millis();
+  static uint32_t loopCount=0;
+  if (t1-t0>1000) 
+  { Serial.printf("%d %d %d %.3f kHz\n\r",
+        loopCount,i2sProcCount, N_DAT, ((float)N_DAT*(float)i2sProcCount/1000.0f));
+    i2sProcCount=0;
+    loopCount=0;
+    t0=t1;
+  }
+  loopCount++;
 }
 
 
@@ -119,9 +137,6 @@ void c_myApp::loop()
 #define ICHAN_LEFT  0
 #define ICHAN_RIGHT 1
 static int16_t waveform[2*AUDIO_NBUF]; // store for stereo usb-audio data
-
-// circular storage where audio data are stored 
-extern c_buff audioStore;
 #endif
 
 void i2sInProcessing(void * s, void * d)
