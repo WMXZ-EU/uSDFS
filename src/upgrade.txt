@@ -26,5 +26,5 @@ by
   #define _T(x) u ## x
   #define _TEXT(x) u ## x
 
-convert all option/*.c to option/*.h (to allow arduino compling)
-change accidingly all #include statements in file option/unicode.c
+convert all option/*.c to option/*.h (to allow arduino compiling)
+change accordingly all #include statements in file option/unicode.c

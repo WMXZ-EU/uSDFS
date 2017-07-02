@@ -27,7 +27,7 @@
 /****************************************************************************************/
 #include "ICS43432.h" // defines also N_BITS
 
-#define F_SAMP 150000
+#define F_SAMP 48000
 // Note: 
 // change either F_CPU or F_SAMP if I2S setup fails to configure
 // i.e. there are no DMA interrupts and 'i2sInProcessing' is not running
@@ -78,6 +78,56 @@ void logger_write(uint8_t *data, uint16_t nbuf);
 uint32_t logger_save(void);
 #endif
 
+//==================== I2S processing ========================================
+#ifdef DO_AUDIO
+#define AUDIO_NBUF N_DAT
+#define AUDIO_SHIFT 8 // for 24 bit to 16 bit conversion (should be larger/equal of 8
+#define ICHAN_LEFT  0
+#define ICHAN_RIGHT 1
+static int16_t waveform[2*AUDIO_NBUF]; // store for stereo usb-audio data
+#endif
+
+uint32_t i2sProcCount=0;
+
+void i2sInProcessing(void * s, void * d)
+{
+  static uint16_t is_I2S=0;
+  if(is_I2S) return;
+  is_I2S=1;
+  i2sProcCount++;
+  
+  int32_t *src = (int32_t *) d;
+  // for ICS43432 need to shift left to get correct MSB 
+  for(int ii=0; ii<N_CHAN*N_DAT;) 
+  { src[ii++]<<=1; src[ii++]<<=1;src[ii++]<<=1; src[ii++]<<=1;}
+
+#ifdef DO_LOGGER
+  // store data in logger buffer
+  logger_write((uint8_t *) src, N_CHAN*N_DAT*sizeof(int32_t));
+#endif
+//
+#ifdef DO_AUDIO
+  // prepare data for USB-Audio
+  // extract data from I2S buffer
+  for(int ii=0; ii<AUDIO_NBUF; ii++)
+  {  
+      waveform[2*ii]  =(int16_t)(src[ICHAN_LEFT +ii*N_CHAN]>>AUDIO_SHIFT);
+      waveform[2*ii+1]=(int16_t)(src[ICHAN_RIGHT+ii*N_CHAN]>>AUDIO_SHIFT);
+      
+//      simulate
+//      float arg=2.0f*3.1415926535f*3.0f*(float)ii/(float) AUDIO_NBUF;
+//      float amp=1<<3;
+//      waveform[2*ii]  = (int16_t)(amp*sinf(arg));
+//      waveform[2*ii+1]= waveform[2*ii];
+  }
+  // put data onto audioStore
+  audioStore.put((uint8_t *) waveform, 4*AUDIO_NBUF);
+#endif  
+//
+  is_I2S=0;
+}
+
+
 /***************************************************************/
 void c_myApp::setup()
 {
@@ -102,8 +152,6 @@ void c_myApp::setup()
   
 }
 
-uint32_t i2sProcCount=0;
-
 void c_myApp::loop()
 { 
 #ifdef DO_LOGGER
@@ -115,8 +163,7 @@ void c_myApp::loop()
   // otherwise run logger save
   if(logger_save() == (uint32_t)-1)
   { ICS43432.stop(); Serial.println("stopped");pinMode(13,OUTPUT); appState=1; return;}
-#endif
-
+#else
   static uint32_t t0=0;
   uint32_t t1=millis();
   static uint32_t loopCount=0;
@@ -128,49 +175,6 @@ void c_myApp::loop()
     t0=t1;
   }
   loopCount++;
-}
-
-
-#ifdef DO_AUDIO
-#define AUDIO_NBUF N_DAT
-#define AUDIO_SHIFT 8 // for 24 bit to 16 bit conversion (should be larger/equal of 8
-#define ICHAN_LEFT  0
-#define ICHAN_RIGHT 1
-static int16_t waveform[2*AUDIO_NBUF]; // store for stereo usb-audio data
 #endif
-
-void i2sInProcessing(void * s, void * d)
-{
-  static uint16_t is_I2S=0;
-  if(is_I2S) return;
-  is_I2S=1;
-  
-  int32_t *src = (int32_t *) d;
-  // for ICS43432 need to shift left to get correct MSB 
-  for(int ii=0; ii<N_CHAN*N_DAT;) 
-  { src[ii++]<<=1; src[ii++]<<=1;src[ii++]<<=1; src[ii++]<<=1;}
-
-  i2sProcCount++;
-#ifdef DO_LOGGER
-  // first logger
-  logger_write((uint8_t *) src, N_CHAN*N_DAT*sizeof(int32_t));
-#endif
-#ifdef DO_AUDIO
-  // prepare data for USB-Audio
-  // extract data from I2S buffer
-  for(int ii=0; ii<AUDIO_NBUF; ii++)
-  {  
-      waveform[2*ii]  =(int16_t)(src[ICHAN_LEFT +ii*N_CHAN]>>AUDIO_SHIFT);
-      waveform[2*ii+1]=(int16_t)(src[ICHAN_RIGHT+ii*N_CHAN]>>AUDIO_SHIFT);
-      
-//      float arg=2.0f*3.1415926535f*3.0f*(float)ii/(float) AUDIO_NBUF;
-//      float amp=1<<3;
-//      waveform[2*ii]  =(int16_t)(amp*sinf(arg));
-//      waveform[2*ii+1]=(int16_t)(amp*sinf(arg));
-  }
-  // put data onto audioStore
-  audioStore.put((uint8_t *) waveform, 4*AUDIO_NBUF);
-#endif  
-  is_I2S=0;
 }
 

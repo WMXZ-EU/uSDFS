@@ -31,7 +31,7 @@
 #include "diskio.h"
 
 #if defined __MK66FX1M0__ || defined __MK64FX512__
-#include "sdhc.h"
+#include "sdio.h"
 #endif
 
 #include "sdcard.h"
@@ -144,7 +144,7 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 			sdspi_select(drv);
 			while(sd_waitforready());
 #if MULTI_SECTOR == 1
-#if OLD_VER == 0
+	#if OLD_VER == 0
 			if(count==1)
 			{
 				result = SDReadBlock(sector, buff);
@@ -161,7 +161,7 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 					break;
 				}
 			}
-#else
+	#else
 			while (count)
 			{
 				result = SDReadBlock(sector, buff);
@@ -174,7 +174,7 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 				count--;
 				buff = buff + 512;		// SD card library uses sector size of 512; FatFS better, also!
 			}
-#endif
+	#endif
 #else
 			while (count)
 			{
@@ -243,7 +243,7 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 			sdspi_select(drv);
 			while(sd_waitforready());
 #if MULTI_SECTOR == 1
-#if OLD_VER == 0
+	#if OLD_VER == 0
 			if(count==1)
 			{
 				result = SDWriteBlock(sector, (uint8_t *)buff);
@@ -262,7 +262,7 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 					break;
 				}
 			}
-#else
+	#else
 			while (count)
 			{
 				result = SDWriteBlock(sector, (uint8_t *)buff);
@@ -275,7 +275,7 @@ DRESULT disk_write (BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 				count--;
 				buff = buff + 512;			// SD card library uses sector size of 512; FatFS better, also!
 			}
-#endif
+	#endif
 #else
 			// translate the arguments here
 			while (count)

@@ -52,8 +52,8 @@
 #define SDHC_SYSCTL_DTOCV_MASK    0xF0000u
 #endif
 
-#include "sdhc.h"
-#include "sdhc_prv.h"
+#include "sdio.h"
+#include "sdio_prv.h"
 
 #define USB_DEBUG
 #undef USB_DEBUG
