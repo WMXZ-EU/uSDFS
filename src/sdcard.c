@@ -727,20 +727,29 @@ static void  sd_clock_and_release(void)
 
 #undef USE_SD_CRC
 
-inline void usd_chipSelectLow()
+__attribute__((always_inline))
+inline void usd_chipSelectLow(void)
 {	chipselect();
 }
 
-inline void usd_chipSelectHigh()
+__attribute__((always_inline))
+inline void usd_chipSelectHigh(void)
 {	chipdeselect();
 	xchg(0xff); // send 8 final clocks
 }
 
-inline void usd_error(uint32_t error){m_usd_error=error;}
-uint32_t usd_getError(void) { return m_usd_error;}
+__attribute__((always_inline))
+inline void usd_error(uint32_t error) {m_usd_error=error;}
 
-inline void usd_status(uint32_t status){m_usd_status=status;}
-uint32_t usd_getStatus(void) { return m_usd_status;}
+__attribute__((always_inline))
+inline uint32_t usd_getError(void) { return m_usd_error;}
+
+__attribute__((always_inline))
+inline void usd_status(uint32_t status) {m_usd_status=status;}
+
+__attribute__((always_inline))
+inline uint32_t usd_getStatus(void) { return m_usd_status;}
+
 
 
 // wait for card to go not busy

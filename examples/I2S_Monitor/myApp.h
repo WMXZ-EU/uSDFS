@@ -12,3 +12,4 @@ class c_myApp
 };
 
 #endif
+

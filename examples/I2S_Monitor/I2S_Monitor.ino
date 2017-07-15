@@ -2,7 +2,14 @@
 // Version 18-05-17
 //
 // Arduino interface
-// 
+// is .ino in Arduino and .cpp otherwise
+
+extern "C"
+{
+void setup();
+void loop();
+}
+
 #include "myApp.h"
 c_myApp myApp;
 /*-----------------------------------------------------------*/
@@ -15,5 +22,6 @@ void setup()
 void loop()
 { myApp.loop();
 }
+
 
 

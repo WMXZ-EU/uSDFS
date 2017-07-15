@@ -28,3 +28,4 @@ void logger_write(uint8_t *data, uint16_t nbuf);
 uint32_t logger_save(void);
 
 #endif
+

@@ -8,6 +8,7 @@
 #ifndef FFT_CONV_H_
 #define FFT_CONV_H_
 
+#include "stdint.h"
 #include "cmsis.h"
 //#include "arm_math.h"
 //#include "arm_const_structs.h"
@@ -23,12 +24,13 @@ class C_CONV
 private:
   int nch,nf,ll,nn,mm;
 	float *uu; //[NN];
-  float *vv; //[NN];
+	float *vv; //[NN];
 	float *ww; //[NN];
 	float *bb; //[NF*NN]; // storage for filter-spectra
-  float *zz; //[NCH*NF*NN]; // storage for data-spectra
+	float *zz; //[NCH*NF*NN]; // storage for data-spectra
 	//
-	float *ov; //[NCH*MM]; // storage for data overlap
+	float *ov; //[NCH*(NN-LL)]; // storage for data overlap
+  int32_t *nj; //[NF];
 	//
 	arm_rfft_fast_instance_f32 *rfft_instance;
 
@@ -38,3 +40,4 @@ public:
 };
 
 #endif /* FFT_FILT_H_ */
+

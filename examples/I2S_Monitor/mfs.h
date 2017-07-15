@@ -33,7 +33,7 @@ class c_mFS
     /* Stop with dying message */
     void die(char *str, FRESULT rc) 
     { 
-#ifdef DI_DEBUF
+#ifdef DO_DEBUG
       Serial.printf("%s: Failed with rc=%u.\n\r", str, rc); Serial.flush(); 
 #endif
       for (;;) {yield(); blink(100);} 
@@ -52,12 +52,12 @@ class c_mFS
       //
       // check status of file
       rc =f_stat(wfilename,0);
-#ifdef DI_DEBUF
+#ifdef DO_DEBUG
       Serial.printf("stat %d %x\n",rc,fil.obj.sclust);
 #endif
 
       rc = f_open(&fil, wfilename, FA_WRITE | FA_CREATE_ALWAYS);
-#ifdef DI_DEBUF
+#ifdef DO_DEBUG
       Serial.printf(" opened %d %x\n\r",rc,fil.obj.sclust);
 #endif
       // check if file is Good
@@ -66,7 +66,7 @@ class c_mFS
         rc = f_close(&fil);
         if(rc == FR_INVALID_OBJECT)
         { 
-#ifdef DI_DEBUF
+#ifdef DO_DEBUG
           Serial.println("unlinking file");
 #endif
           rc = f_unlink(wfilename);
@@ -92,7 +92,7 @@ class c_mFS
       rc = f_write(&fil, buffer, nbuf, &wr);
       if (rc== FR_DISK_ERR) // IO error
       { uint32_t usd_error = usd_getError();
-#ifdef DI_DEBUF
+#ifdef DO_DEBUG
         Serial.printf(" write FR_DISK_ERR : %x\n\r",usd_error);
 #endif
         // only option is to close file
@@ -109,4 +109,5 @@ c_mFS mFS;
 /*
   end of FS specific interface
 */
+
 
