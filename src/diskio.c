@@ -224,7 +224,7 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 // PARAMETERS:  drv - Physical drive nmuber (0)
 //              buff - pointer on buffer where write data are prepared
 //              sector - index of start sector
-//              count - count of sector to read
+//              count - count of sector to write
 //              
 // RETURNS:     result of operation
 //-----------------------------------------------------------------------------

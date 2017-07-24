@@ -21,7 +21,8 @@
 #define  TRUE		!FALSE
 #endif
 
-void logg(char c);
+void loggx(char c) {}
+//void loggx(char c) {logg(c);}
 
 /*
  *  Externally accessible variables
@@ -786,7 +787,7 @@ uint16_t usd_cardCommand(uint8_t cmd, uint32_t arg)
 
 	usd_chipSelectLow();
 	// wait if busy
-	if(!usd_waitNotBusy(SD_WRITE_TIMEOUT, &status)) logg('-');
+	if(!usd_waitNotBusy(SD_WRITE_TIMEOUT, &status)) loggx('-');
 
 	uint8_t *pa = (uint8_t*)(&arg);
 
