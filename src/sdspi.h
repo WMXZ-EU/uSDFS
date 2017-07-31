@@ -41,26 +41,22 @@
 /* modified for Teensy 3.5/6 that have SPI0,SPI1,SPI2
  * changed bit-banging SPI to SPI3
  *
- *	SPI0: SCK = PC (Teensy 3.1 pin labeled 14)
+ *	SPI0: SCK  = PC (Teensy 3.1 pin labeled 14)
  *        MOSI = PC6 (Teensy 3.1 pin labeled 7)
  *        MISO = PC7 (Teensy 3.1 pin labeled 8)
  *
- *  SPI1: SCK = PD1 (sdhc clk)
+ *  SPI1: SCK  = PD1 (sdhc clk)
  *        MOSI = PD2 (sdhc dat0)
  *        MISO = PD3 (sdhc cmd)
  *
- *  SPI2: SCK = PD1 (Teensy 3.1 pin labeled 46)
- *        MOSI = PC0 (Teensy 3.1 pin labeled 44)
- *        MISO = PB0 (Teensy 3.1 pin labeled 45)
+ *  SPI2: SCK  = PD1 (Teensy 3.5/6 pin labeled 46)
+ *        MOSI = PC0 (Teensy 3.5/6 pin labeled 44)
+ *        MISO = PB0 (Teensy 3.5/6 pin labeled 45)
  *
- *  SPI3: SCK = PD1 (Teensy 3.1 pin labeled 35)
- *        MOSI = PC0 (Teensy 3.1 pin labeled 36)
- *        MISO = PB0 (Teensy 3.1 pin labeled 37)
  */
 
 #ifndef  SDSPI_H
 #define  SDSPI_H
-
 
 
 /*
@@ -81,26 +77,15 @@
  *  frequency in kHz.  Argument numbits selects the number of bits
  *  in a transfer; legal values are 4 through 16.
  *
- *  SPI channel 2 is bit-banged, so the sckfreqkhz value will be ignored,
- *  but you cannot pass in 0; send 1 or whatever else you like.
- *
  *  Upon exit, this routine returns the final SPI clock frequency,
  *  which may be less than the requested frequency, but will not exceed
  *  it.  If this routine cannot set the requested frequency, it returns
  *  0 and the SPI is NOT initialized or enabled!
  *
- *  SPI channel 2 is bit-banged, so the value it returns is close to
- *  the final frequency but is not exact.  The final frequency will
- *  be close to 2 MHz.
- *
- *  NOTE: This routine does NOT perform any I/O of a chip-select line;
- *  that init must be done by external code.
- *
  *  NOTE: This routine does NOT use the SPI-based chip-selects; external
  *  code must assign chip-select to a GPIO pin and must handle all enable/
  *  disable functions using that pin.
  */
-// WMXZ: NOTE: bit-bang is now on spi 3
 //
 #ifdef __cplusplus
 extern "C"{
@@ -122,16 +107,10 @@ uint32_t	SPIExchange(uint32_t  spinum, uint32_t  c);
 uint32_t	SPIExchange16(uint32_t  spinum, uint32_t  c);
 
 /*
- *  Block transfer routines that may use FIFO (only SPI0)
+ *  Block transfer routines that may use FIFO (SPI0 only)
  */
 void	SPIExchangeBlock(int16_t port, void *inpbuf, void *outbuf, size_t count);
 uint16_t SPIExchangeBlock16(int16_t port, void *inpbuf, void *outbuf, size_t count);
-
-/*
- *  Bit bang routines
- */
-uint32_t  SPIBitBangInit(uint32_t  sckfreqkhz, uint32_t  numbits);
-uint32_t  SPIBitBangExchange(uint32_t  c);
 
 
 #ifdef __cplusplus

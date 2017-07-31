@@ -116,6 +116,8 @@ void SDHC_DMAWait(void)
 #endif
 }
 
+uint32_t MA,MB;
+uint32_t MC[6];
 //-----------------------------------------------------------------------------
 // FUNCTION:    SDHC_InitCard
 // RETURNS:     status of initialization(OK, nonInit, noCard, CardProtected)
@@ -123,11 +125,12 @@ void SDHC_DMAWait(void)
 DSTATUS SDHC_InitCard(void)
 {
 	DSTATUS resS;
-	DRESULT resR;
+//	DRESULT resR;
 	LWord ii;
 	uint32_t kbaudrate;
 
 	resS = sdhc_Init();
+	MC[0]=MA; MC[1]=MB;
 
 	sdCardDesc.status = resS;
 	sdCardDesc.address = 0;
@@ -226,9 +229,11 @@ DSTATUS SDHC_InitCard(void)
 	}  
 
 #if SDHC_USE_ISR == 1
-	// adaptet from Bill Greiman
-	if(sdhc_CMD6_Switch(0X00FFFFFF,m_sdhc_CMD6_Status) && (m_sdhc_CMD6_Status[13] & 2) &&
-	   sdhc_CMD6_Switch(0X80FFFFF1,m_sdhc_CMD6_Status)	&& (m_sdhc_CMD6_Status[16] & 0XF) == 1)
+	// adapted from Bill Greiman
+	// but he has last condition wrong (following section 60.7.4.2 in K66P144M180SF5RMV2.pdf)
+
+	if(sdhc_CMD6_Switch(0X00FFFFF1,m_sdhc_CMD6_Status) && (m_sdhc_CMD6_Status[13] & 2) &&
+	   sdhc_CMD6_Switch(0X80FFFFF1,m_sdhc_CMD6_Status) && !((m_sdhc_CMD6_Status[16] & 0xF) == 0xf))
 		kbaudrate = 50000;
 	else 
 		kbaudrate = 25000;
@@ -241,6 +246,7 @@ DSTATUS SDHC_InitCard(void)
 
 	// Set the SDHC default baud rate
 	sdhc_SetBaudrate(kbaudrate);
+	MC[2]=MA; MC[3]=MB;
 
 	// Init GPIO
 	sdhc_InitGPIO(0xFFFF);
@@ -324,7 +330,7 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 	m_sdhc_waitCmd13 = 0;
 
 	while(SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) /* yield() */;
-	
+
 	SDHC_IRQSTAT = 0xffff; // clear interrupt status register
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
 	SDHC_DSADDR  = (LWord)pData;  
@@ -332,8 +338,24 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 	SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(count) | SDHC_BLKATTR_BLKSIZE(SDHC_BLOCK_SIZE);
 	sdhc_enableDma();
 	
-	SDHC_CMDARG = sector;
-	SDHC_XFERTYP = count==1 ? SDHC_CMD24_XFERTYP: SDHC_CMD25_XFERTYP; 
+	// if multi-block write 
+	// pre-erase blocks
+	if(count>1)
+	{
+		sdhc_CMD(SDHC_CMD55_XFERTYP, 0);
+		sdhc_CMD(SDHC_ACMD23_XFERTYP, count);
+
+		SDHC_CMDARG = sector;
+		SDHC_XFERTYP = SDHC_CMD25_XFERTYP;
+	}
+	else
+	{
+		SDHC_CMDARG = sector;
+		SDHC_XFERTYP = SDHC_CMD24_XFERTYP;
+	}
+
+//	SDHC_CMDARG = sector;
+//	SDHC_XFERTYP = (count==1) ? SDHC_CMD24_XFERTYP: SDHC_CMD25_XFERTYP;
 
 #if SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_SWPOLL
 	if(sdhc_waitCommandReady())
@@ -343,7 +365,7 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count)
 #elif SDHC_TRANSFERTYPE == SDHC_TRANSFERTYPE_DMA
 		result=RES_OK;
 #endif	
-	// Auto CMD12 is enabled
+	// Auto CMD12 is enabled for DMA
 	if((result != RES_OK) && (count>1))
 		result=sdhc_CMD12_StopTransferWaitForBusy();
 	return result;
@@ -358,6 +380,8 @@ static uint32_t sdhc_waitCommandReady(void)
 	
 	return ((m_sdhc_irqstat & SDHC_IRQSTAT_CC) && !(m_sdhc_irqstat & SDHC_IRQSTAT_CMD_ERROR));
 }
+
+
 /******************************************************************************
 *
 *   Private functions
@@ -455,12 +479,13 @@ static DRESULT sdhc_SetBaudrate(uint32_t kbaudrate)
 
 	// get dividers from requested baud rate 
 	uint32_t aux=F_CPU;
-	uint32_t ii=0,jj=1;
+	uint32_t ii=1,jj=1;
 	uint32_t baudrate=kbaudrate*1000;
 
 	while(aux/(16*(1<<ii))>baudrate) ii++;
 	while(aux/(jj*(1<<ii))>baudrate) jj++;
-
+    MA=ii; MB=jj;
+    //
 	uint32_t minpresc = (1<<ii)>>1;
 	uint32_t mindiv   = jj-1;
 
@@ -471,6 +496,9 @@ static DRESULT sdhc_SetBaudrate(uint32_t kbaudrate)
 			(~ (SDHC_SYSCTL_DTOCV_MASK | SDHC_SYSCTL_SDCLKFS_MASK | SDHC_SYSCTL_DVS_MASK));
 	SDHC_SYSCTL = sysctl | 
 			(SDHC_SYSCTL_DTOCV(0x0E) | SDHC_SYSCTL_SDCLKFS(minpresc) | SDHC_SYSCTL_DVS(mindiv));
+
+//	MA=minpresc;
+//	MB=mindiv;
 
 	/* Wait for stable clock */
 	time_out = 0xfffff;
@@ -531,7 +559,7 @@ static DRESULT sdhc_WriteBlock(const LWord* pData, LWord Count, LWord Size)
 	while (ii--) 
 	{        
 		if (SDHC_IRQSTAT & (SDHC_IRQSTAT_DEBE | SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE)) 
-		{ // check for read errors           
+		{ // check for write errors
 			SDHC_IRQSTAT |= (SDHC_IRQSTAT_DEBE | SDHC_IRQSTAT_DCE | SDHC_IRQSTAT_DTOE | SDHC_IRQSTAT_BWR);
 			return 20;  // return error        
 		}
@@ -568,7 +596,7 @@ static uint16_t sdhc_isBusy(void)
 //================================================================================
 void sdhc_isr(void) 
 {
-	while(!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC))  yield() ;	// wait for transfer to complete
+	while(!(SDHC_IRQSTAT & SDHC_IRQSTAT_TC))  /*yield()*/ ;	// wait for transfer to complete
  	SDHC_IRQSIGEN = 0;
 	SDHC_IRQSTATEN &= ~SDHC_IRQSTATEN_DINTSEN;
 

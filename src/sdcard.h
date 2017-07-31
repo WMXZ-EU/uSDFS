@@ -29,18 +29,26 @@
 #define  SD_WRITE_MULTI		(0x40 + 25)			/* CMD25 - multi block write */
 #define  SD_READ_STOP		(0x40 + 12)			/* CMD12 - stop multi block read */
 
-#define  CMD55	(55)			/* multi-byte preface command */
+#define SD_APP_CMD (55)
+#define CMD55	(55)			/* multi-byte preface command */
+
 /** SET_WR_BLK_ERASE_COUNT - Set the number of write blocks to be
      pre-erased before writing */
+#define SD_WRITE_ERASE_COUNT (23)
 #define ACMD23	(23)
 
 
 /** ERASE_WR_BLK_START - sets the address of the first block to be erased */
+#define SD_ERASE_BLK_START (32)
 #define CMD32	(32)
+
 /** ERASE_WR_BLK_END - sets the address of the last block of the continuous
     range to be erased*/
+#define SD_ERASE_BLK_END (33)
 #define CMD33	(33)
+
 /** ERASE - erase all previously selected blocks */
+#define SD_ERASE (38)
 #define CMD38	(38)
 
 

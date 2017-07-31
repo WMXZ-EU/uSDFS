@@ -398,7 +398,7 @@ uint16_t SPIExchangeBlock16(int16_t port, void *inpbuf, void *outbuf, size_t cou
 	return 0;
 }
 
-
+#ifdef DO_NOT_COMPILE
 /*********************************** BitBang (not tested)************************************************/
 GPIO_MemMapPtr kGPIO[] = GPIO_BASE_PTRS;
 
@@ -471,3 +471,4 @@ uint32_t  SPIBitBangExchange(uint32_t  c)
 
 }
 
+#endif
