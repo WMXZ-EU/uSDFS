@@ -234,7 +234,7 @@ DSTATUS SDHC_InitCard(void)
 
 	if(sdhc_CMD6_Switch(0X00FFFFF1,m_sdhc_CMD6_Status) && (m_sdhc_CMD6_Status[13] & 2) &&
 	   sdhc_CMD6_Switch(0X80FFFFF1,m_sdhc_CMD6_Status) && !((m_sdhc_CMD6_Status[16] & 0xF) == 0xf))
-		kbaudrate = 50000;
+		kbaudrate = 60000;
 	else 
 		kbaudrate = 25000;
 #else
@@ -242,7 +242,7 @@ DSTATUS SDHC_InitCard(void)
 #endif
 
 	// De-Init GPIO
-	sdhc_InitGPIO(0);
+	sdhc_InitGPIO(3);
 
 	// Set the SDHC default baud rate
 	sdhc_SetBaudrate(kbaudrate);
