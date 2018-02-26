@@ -459,12 +459,12 @@ static DSTATUS sdhc_Init(void)
 static void sdhc_InitGPIO(Word init)
 {	// with input from FrankB 
 	// https://forum.pjrc.com/threads/41219-Teensy-3-6-after-Reset-SD-Card-does-not-always-initialize?p=149863&viewfull=1#post149863
-  PORTE_PCR0 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.D1  */
-  PORTE_PCR1 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.D0  */
-  PORTE_PCR2 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1))  | PORT_PCR_DSE;                                 /* SDHC.CLK */
-  PORTE_PCR3 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.CMD */
-  PORTE_PCR4 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.D3  */
-  PORTE_PCR5 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.D2  */  
+  PORTE_PCR0 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1)))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.D1  */
+  PORTE_PCR1 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1)))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.D0  */
+  PORTE_PCR2 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1)))  | PORT_PCR_DSE;                                 /* SDHC.CLK */
+  PORTE_PCR3 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1)))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.CMD */
+  PORTE_PCR4 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1)))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.D3  */
+  PORTE_PCR5 = (init ? PORT_PCR_MUX(4):(PORT_PCR_MUX(1)))  | PORT_PCR_DSE | PORT_PCR_PS | PORT_PCR_PE ;    /* SDHC.D2  */  
 }
 
 //-----------------------------------------------------------------------------
