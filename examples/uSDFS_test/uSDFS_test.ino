@@ -125,6 +125,7 @@ void setup() {
            SERIALX.printf("   <dir>  %s\r\n", tchar2char(fno.fname,80,text));
       else
            SERIALX.printf("%8d  %s\r\n", (int)fno.fsize, tchar2char(fno.fname,80,text)); // fsize is QWORD for exFAT
+	  delay(10);
   }
   if (rc) die("Listing",rc);
 

@@ -45,3 +45,6 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+/examples/uSDFS_test/Debug
+/examples/uSDFS_test/__vm
+/examples/uSDFS_test/.vs/uSDFS_test/v15

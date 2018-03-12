@@ -1,21 +1,19 @@
 from new version of CHaN's Filesystem
 
-copy all but diskio.c and diskio.h
+copy all BUT diskio.c and diskio.h
 
 changes in ffconf.h
-  #define	_USE_STRFUNC	1
-  #define	_CODE_PAGE	437
-  #define	_USE_LFN	1
-  #define	_LFN_UNICODE	1
-  #define	_STRF_ENCODE	3
-  #define	_FS_EXFAT	1
+  #define	FF_USE_STRFUNC	1
+  #define	FF_CODE_PAGE	437
+  #define	FF_USE_LFN	1
+  #define	FF_LFN_UNICODE	1
+  #define	FF_STRF_ENCODE	3
+  #define	FF_FS_EXFAT	1
 
 replace in integer.h 
   typedef unsigned char	BYTE;
 by
-  #ifdef BYTE
-    #undef BYTE
-  #endif
+  #undef BYTE
   typedef unsigned char	BYTE;
 
 
@@ -26,5 +24,3 @@ by
   #define _T(x) u ## x
   #define _TEXT(x) u ## x
 
-convert all option/*.c to option/*.h (to allow arduino compiling)
-change accordingly all #include statements in file option/unicode.c

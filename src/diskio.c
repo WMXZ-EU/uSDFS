@@ -198,7 +198,7 @@ DRESULT disk_read (BYTE drv, BYTE* buff, DWORD sector, UINT count)
 				rc= SDHC_ReadBlocks(buff, sector, count);
 				SDHC_DMAWait();
 			#else
-				BYTE*ptr=(BYTE *)buff;
+				BYTE* ptr=(BYTE *)buff;
 				for(;count;count--)
 				{
 					rc= SDHC_ReadBlocks(ptr, sector, 1);
