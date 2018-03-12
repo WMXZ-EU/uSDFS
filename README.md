@@ -73,3 +73,6 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 * Version 1.0.5
 	* upgraded to ELM-CHaN's ff12c
 		
+### - 12-mar-2018
+* Version 1.0.6
+	* upgraded to ELM-CHaN's ff13a
