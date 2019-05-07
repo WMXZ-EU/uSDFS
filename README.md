@@ -1,14 +1,11 @@
 # uSDFS
 uSD File system based on ELM-CHaN generic FAT system
 
-The Teensy library contains a port of ELM_CHaN's generic FAT file system for the PJRC Teensy 3.5/6 MCU.
+The Teensy library contains a port of ELM_CHaN's generic FAT file system for the PJRC Teensy 3.5/6 ant Teensy 4 MCU.
 
 # Examples
-* sdhc_test: basic test the sdio driver of teensy3.6
 * uSDFS_test: basic test of uSD File system
 * logger_RawWrite: testing writing to SD Cards
-* logger_BufferedWrite: use circular buffer for writing to SD cards
-* I2S_logger: acquires data via I2S from ISC43432 microphones and writes data to disk, allows data streaming via USB to PC
 
 # History:
 ### - 26-jun-2016: 
@@ -76,3 +73,11 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 ### - 12-mar-2018
 * Version 1.0.6
 	* upgraded to ELM-CHaN's ff13a
+		
+### - 07-may-2019
+* Version 1.1.0
+	* upgraded to ELM-CHaN's ff13c
+	* refactored library structure
+	* added SPI interface
+	* added Teensy 4 low-level interface
+	* prepared for USB disk (MSC)
