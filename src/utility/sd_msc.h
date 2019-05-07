@@ -1,6 +1,6 @@
 /*
  * WMXZ Teensy uSDFS library
- * Copyright (c) 2016 Walter Zimmer.
+ * Copyright (c) 2019 Walter Zimmer.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -22,20 +22,22 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-//uSDif.h
-#ifndef USDIF_H
-#define USDIF_H
+#ifndef _SD_MSC_H_
+#define _SD_MSC_H_
 
-
+#include "../diskio.h"
 #ifdef __cplusplus
-extern "C"{
+extern "C"
+{
 #endif
 
-void sdspi_setup(uint16_t dev);
-void sdspi_select(uint16_t dev);
+int MSC_disk_status();
+int MSC_disk_initialize();
+int MSC_disk_read(BYTE *buff, DWORD sector, UINT count);
+int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count);
+int MSC_ioctl(BYTE cmd, BYTE *buff);
 
 #ifdef __cplusplus
-
 }
 #endif
 

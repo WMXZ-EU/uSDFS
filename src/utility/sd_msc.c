@@ -1,6 +1,6 @@
 /*
  * WMXZ Teensy uSDFS library
- * Copyright (c) 2016 Walter Zimmer.
+ * Copyright (c) 2019 Walter Zimmer.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -22,42 +22,9 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-//ff_utils.h
-//
-#ifndef _FF_UTILS_H
-#define _FF_UTILS_H
-#include <time.h>
-/*---------------------------------------------------------*/
-/* User Provided Timer Function for FatFs module           */
-/*---------------------------------------------------------*/
-#define EPOCH_YEAR 1970 //T3 RTC
-#define LEAP_YEAR(Y) (((EPOCH_YEAR+Y)>0) && !((EPOCH_YEAR+Y)%4) && ( ((EPOCH_YEAR+Y)%100) || !((EPOCH_YEAR+Y)%400) ) )
-static  const uint8_t monthDays[]={31,28,31,30,31,30,31,31,30,31,30,31}; 
-/*  int  tm_sec;
-  int tm_min;
-  int tm_hour;
-  int tm_mday;
-  int tm_mon;
-  int tm_year;
-  int tm_wday;
-  int tm_yday;
-  int tm_isdst;
-*/
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-struct tm seconds2tm(uint32_t tt);
-
-DWORD get_fattime (void);
-
-
-TCHAR * char2tchar( char * charString, size_t nn, TCHAR * tcharString);
-char * tchar2char(  TCHAR * tcharString, size_t nn, char * charString);
-
-#ifdef __cplusplus
-}
-#endif
-
-
-#endif
+ #include "sd_msc.h"
+int MSC_disk_status() {return 0;}
+int MSC_disk_initialize() {return 0;}
+int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) {return 0;}
+int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count) {return 0;}
+int MSC_ioctl(BYTE cmd, BYTE *buff) {return 0;}

@@ -1,11 +1,17 @@
 //Copyright 2016 by Walter Zimmer
 // Version 04-05-17
 //
-#define USE_USB_SERIAL
-#ifdef USE_USB_SERIAL
-	#define SERIALX Serial
-#else
-	#define SERIALX Serial1
+#include "ff.h"
+#include "ff_utils.h"
+
+#define TEST_DRV 1
+//
+#if TEST_DRV == 0
+  const char *Dev = "0:/";  // SPI
+#elif TEST_DRV == 1
+  const char *Dev = "1:/";  // SDHC
+#elif TEST_DRV == 2
+  const char *Dev = "2:/";  // USB
 #endif
 
 #define NCH 4 // number of channels
@@ -29,8 +35,6 @@ void loop();
  * description of API should be obvious from uSDFS example below
  *
 */
-#include "ff.h"
-#include "ff_utils.h"
 
 extern "C" uint32_t usd_getError(void);
 
@@ -43,38 +47,36 @@ class c_mFS
 
 		UINT wr;
 		
+		char device[40];
 		char filename[80];
-		TCHAR wfilename[80];
 	
 		/* Stop with dying message */
 		void die(char *str, FRESULT rc) 
-		{ SERIALX.printf("%s: Failed with rc=%u.\n", str, rc); for (;;) delay(100); }
+		{ Serial.printf("%s: Failed with rc=%u.\n", str, rc); for (;;) delay(100); }
 		
 	public:
 		void init(void)
 		{
-			rc = f_mount (&fatfs, (TCHAR *)_T("0:/"), 0);      /* Mount/Unmount a logical drive */
-			if (rc) die("mount", rc);
+			if (rc = f_mount (&fatfs, device, 0)) die("mount", rc);    /* Mount/Unmount a logical drive */
 		}
 		
 		void open( char * fmt, uint32_t ifn)
 		{
 			sprintf(filename,fmt,ifn);
-			SERIALX.println(filename);
-			char2tchar(filename,80,wfilename);
+			Serial.println(filename);
 			//
 			// check status of file
-			rc =f_stat(wfilename,0);
-			SERIALX.printf("stat %d %x\n",rc,fil.obj.sclust);
+			rc =f_stat(filename,0);
+			Serial.printf("stat %d %x\n",rc,fil.obj.sclust);
 
-			rc = f_open(&fil, wfilename, FA_WRITE | FA_CREATE_ALWAYS);
-			SERIALX.printf(" opened %d %x\n\r",rc,fil.obj.sclust);
+			rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS);
+			Serial.printf(" opened %d %x\n\r",rc,fil.obj.sclust);
 			// check if file is Good
 			if(rc == FR_INT_ERR)
 			{ // only option is to close file
 				rc = f_close(&fil);
 				if(rc == FR_INVALID_OBJECT)
-				{ SERIALX.println("unlinking file");
+				{ Serial.println("unlinking file");
 				  rc = f_unlink(wfilename);
 				  if (rc) die("unlink", rc);
 				}
@@ -83,14 +85,12 @@ class c_mFS
 				
 			}
 			// retry open file
-			rc = f_open(&fil, wfilename, FA_WRITE | FA_CREATE_ALWAYS);
-			if(rc) die("open", rc);
+			if(rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS)) die("open", rc);
 		}
 		
 		void close()
 		{
-			rc = f_close(&fil);
-			if (rc) die("close", rc);
+			if (rc = f_close(&fil)) die("close", rc);
 		}
 		
 		uint32_t write( uint8_t *buffer, uint32_t nbuf)
@@ -98,7 +98,7 @@ class c_mFS
 			rc = f_write(&fil, buffer, nbuf, &wr);
 			if (rc== FR_DISK_ERR) // IO error
 			{	uint32_t usd_error = usd_getError();
-				SERIALX.printf(" write FR_DISK_ERR : %x\n\r",usd_error);
+				Serial.printf(" write FR_DISK_ERR : %x\n\r",usd_error);
 				// only option is to close file
 				// force closing file
 				return 0;
@@ -127,9 +127,10 @@ void blink(uint32_t msec)
 void  doLogging( uint8_t *buffer, uint16_t ndat);
 
 #define FREQ (FSAMP/NSAMP) // firing rate for data block input (simulated acquisition)
-uint8_t Data[NBYTES] __attribute__( ( aligned ( 16 ) ) ); // frome source
+uint32_t Data[NDAT]; 		// from source
 uint32_t count=0;
 
+#if defined(__MK20DX256__) ||  defined(__MK66FX1M0__)
 void timer_init(void)
 {
   SIM_SCGC6 |= SIM_SCGC6_PIT;
@@ -150,9 +151,35 @@ void timer_start(void)
 void pit0_isr(void)
 { //
   PIT_TFLG0=1;
-  for(int ii=0; ii<NBYTES; ii++) Data[ii]=(count + ii) % 256;
-  doLogging(Data, NBYTES);
+  for(int ii=0; ii<NDAT; ii++) Data[ii]=(count + ii) % 256;
+  doLogging(Data, NDAT);
 }
+
+#elif defined(__IMXRT0162__)
+void timer_init(void)
+{
+//  SIM_SCGC6 |= SIM_SCGC6_PIT;
+//  // turn on PIT     
+//  PIT_MCR = 0x00;
+}
+
+void timer_start(void) 
+{//    
+//  PIT_LDVAL0 = F_BUS/FREQ; // setup timer 0 for (F_BUS/frequency) cycles     
+//  PIT_TCTRL0 = 2; // enable Timer 0 interrupts      
+  NVIC_SET_PRIORITY(IRQ_PIT_CH0, 7*16); 
+  NVIC_ENABLE_IRQ(IRQ_PIT_CH0);
+//  PIT_TCTRL0 |= 1; // start Timer 0
+}
+
+//
+void pit0_isr(void)
+{ //
+//  PIT_TFLG0=1;
+  for(int ii=0; ii<NDAT; ii++) Data[ii]=(count + ii) % 256;
+  doLogging(Data, NDAT);
+}
+#endif
 
 /*-----------------------------------------------------------*/
 void setup()
@@ -160,15 +187,7 @@ void setup()
 	// wait for serial line to come up
 	pinMode(13,OUTPUT);
 	pinMode(13,HIGH);
-	while(!SERIALX) blink(100);
-
-	#ifndef USB_SERIAL
-	SERIALX.begin(115200,SERIAL_8N1_RXINV_TXINV);
-	#endif
-	SERIALX.println("\nLogger Buffered Write Test");
-	SERIALX.printf("F_BUS %d MHz\n\r",F_BUS/1000000);
-	SERIALX.printf("Sample Rate %d Hz\n\r",FSAMP);
-	SERIALX.printf("Buffer Update Rate %d Hz\n\r",FREQ);
+	while(!Serial) blink(100);
 
 	mFS.init();
 
@@ -183,24 +202,51 @@ void loop()
 /***************************** LOGGING ***********************/
 uint32_t ifn=0;
 #define MXFN 100 // maximal number of files 
-#define MAX_BLOCK_COUNT 1000  // number of BUFFSIZE writes to file
+#define MAX_BLOCK_COUNT 1000  // number of DISK_BUFFSIZE writes to file
 
 #if defined(__MK20DX256__)
-  #define BUFFSIZE (8*1024) // size in bytes of buffer to be written
-  #define DISK_BUFFSIZE (2*BUFFSIZE) // size in bytes of memory buffer 
+  #define DISK_BUFFSIZE (4*NDAT) // size in words of buffer to be written
+  #define MEM_BUFFSIZE (2*DISK_BUFFSIZE) // size in words of memory buffer 
 #elif defined(__MK66FX1M0__)
-  #define BUFFSIZE (32*1024) // size in bytes of buffer to be written
-  #define DISK_BUFFSIZE (4*BUFFSIZE) // size in bytes of memory buffer
+  #define DISK_BUFFSIZE (16*NDAT) // size in words of buffer to be written
+  #define MEM_BUFFSIZE (4*DISK_BUFFSIZE) // size in words of memory buffer
+#elif defined(__IMXRT1062__)
+  #define DISK_BUFFSIZE (16*NDAT) // size in words of buffer to be written
+  #define MEM_BUFFSIZE (4*DISK_BUFFSIZE) // size in words of memory buffer
 #endif
 
 #define INF ((uint32_t) (-1))
-uint8_t Buffer[BUFFSIZE] __attribute__( ( aligned ( 16 ) ) ); // to disk
-uint8_t diskBuffer[DISK_BUFFSIZE] __attribute__( ( aligned ( 16 ) ) ); // memory storage
+uint32_t diskBuffer[DISK_BUFFSIZE]; // to disk
+uint32_t memBuffer[MEM_BUFFSIZE]; // memory storage
 
 uint32_t isFileOpen=0;
 uint32_t t0=0;
 uint32_t t1=0;
 
+static uint32_t n0_dat = 0; // read_pointer
+static uint32_t n1_dat = INF; // write pointer
+  
+void storeBufferData(uint8_t *data, uint16_t nbuf)
+{
+	// copy first data to memmory
+	for(int ii=0; ii<nbuf; ii++) memBuffer[n1_dat+ii]= data[ii]; 
+	n1_dat += nbuf;
+	n1_dat %= MEM_BUFFSIZE; // is save as 
+}
+
+void *getBufferData(uint32_t ndat)
+{ void *ptr;
+  if(n1_dat==INF) return 0; // no data yet
+  //
+  if((n1_dat - n0_dat + MEM_BUFFSIZE) & MEM_BUFFSIZE) > ndat)
+  { ptr = (void *)&memBuffer[n0_dat];
+	n0_dat += ndat;
+	n0_dat %= MEM_BUFFSIZE;
+  }
+  else
+	ptr=0;
+  return ptr;
+}	
 
 /*-------------------------------------------------------------------------*/
 void doLogging(uint8_t *data, uint16_t nbuf)
@@ -210,7 +256,6 @@ void doLogging(uint8_t *data, uint16_t nbuf)
   // keeps state of filing 
   // does open/close of file when required
   //
-  static uint32_t n0_dat=0, n1_dat = INF;
   static uint16_t overrunRisk=0;
   static uint16_t gotData=0; 
 
@@ -218,8 +263,7 @@ void doLogging(uint8_t *data, uint16_t nbuf)
 
   if(isLogging) return;
   isLogging=1;
-  if(ifn>MXFN) 
-  { blink(500); isLogging=0; return; }
+  if(ifn>MXFN) { blink(500); isLogging=0; return; }
 
   if(!count && gotData)
   {
@@ -231,8 +275,8 @@ void doLogging(uint8_t *data, uint16_t nbuf)
       //
       isFileOpen=0;
       t1=micros();
-      float MBs = (1000.0f*BUFFSIZE)/(1.0f*(t1-t0));
-      SERIALX.printf(" (%d - %f MB/s)\n\r",t1-t0,MBs);
+      float MBs = (1000.0f*DISK_BUFFSIZE*4)/(1.0f*(t1-t0));
+      Serial.printf(" (%d - %f MB/s)\n\r",t1-t0,MBs);
       gotData = 0;
     }
   }
@@ -249,47 +293,19 @@ void doLogging(uint8_t *data, uint16_t nbuf)
     isFileOpen=1;
     t0=micros();
   }
-  
+  //
   if(isFileOpen)
   {
-    // copy data to disk buffer
-    if(n1_dat==INF) // reset pointers
-    { n1_dat=0;
-      n0_dat=0;
-    }
-    else if((n1_dat - n0_dat + DISK_BUFFSIZE)%DISK_BUFFSIZE>=(DISK_BUFFSIZE-nbuf)) 
-    { // too close to buffer overrun
-      SERIALX.printf("x %d %d %d\n\r",n0_dat,n1_dat,overrunRisk);
-      n1_dat = INF;
-      isLogging=0;
-      return;
-    }
+	//write data to file 
+	count++;
+	if(!(count%10))Serial.printf(".");
+	if(!(count%640)) Serial.println(); Serial.flush();
+	//
+	if(!mFS.write(data, nbuf)) count=MAX_BLOCK_COUNT; // on error set to max block count to force closing file
 
-    //    
-    // fill temp buffer
-    for(int ii=0; ii<nbuf; ii++) diskBuffer[n1_dat+ii]= data[ii]; 
-    n1_dat += nbuf;
-    n1_dat %= DISK_BUFFSIZE;
-    //
-    // send to disk
-    while((n1_dat - n0_dat + DISK_BUFFSIZE)%DISK_BUFFSIZE>=BUFFSIZE)
-    {  // copy now data
-       for(int ii=0;ii<BUFFSIZE;ii++) Buffer[ii]= diskBuffer[n0_dat+ii];
-       n0_dat += BUFFSIZE; 
-       n0_dat %= DISK_BUFFSIZE;
-       overrunRisk = (n0_dat==n1_dat);
-       count++;
-       //
-       //write data to file 
-       if(!(count%10))SERIALX.printf(".");
-       if(!(count%640)) SERIALX.println(); SERIALX.flush();
-       //
-	  if(!mFS.write(Buffer, BUFFSIZE)) 
-		  count=MAX_BLOCK_COUNT; // set to max block count to force closing file
-       count %= MAX_BLOCK_COUNT;
-       gotData = 1;
-    }
-  }   
+	count %= MAX_BLOCK_COUNT; 
+	gotData = 1;
+  }
   isLogging=0; 
 }
 

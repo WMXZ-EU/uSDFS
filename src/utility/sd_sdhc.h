@@ -22,39 +22,10 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-//sdhc.h
+#ifndef _SD_SDHC_H_
+#define _SD_SDHC_H_
 
-// following code is modified  by Walter Zimmer from 
-// version provided by
-// Petr Gargulak (NXP Employee) 
-//https://community.nxp.com/servlet/JiveServlet/download/339474-1-263510/SDHC_K60_Baremetal.ZIP
-//see also
-//https://community.nxp.com/thread/99202
-
-#ifndef _SDIO_H
-#define _SDIO_H
-/******************************************************************************
-* Includes
-******************************************************************************/
-
-#include "kinetis.h"
-
-// type definitions for 'original' sdhc.c 
-typedef unsigned int   LWord;
-typedef signed int     sLWord;
-typedef unsigned short  Word;
-typedef signed short    sWord;
-typedef unsigned char   Byte;
-typedef signed char     sByte;
-
-typedef unsigned char UCHAR; // for legacy
-#include "diskio.h"
-
-/******************************************************************************
-* Constants
-******************************************************************************/
-
-
+#include "../diskio.h"
 
 /* ESDHC command types */
 #define SDHC_TYPE_NORMAL                    (0x00)
@@ -69,11 +40,6 @@ typedef unsigned char UCHAR; // for legacy
 #define SDHC_FIFO_BUFFER_SIZE               16
 #define SDHC_BLOCK_SIZE                     512
 
-#define SDHC_USE_ISR	                    1	// must always use Interrupts (needed for CMD6)
-
-#define SDHC_DO4BITS                        1	// use 4 bit bus
-//#define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_SWPOLL
-#define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_DMA
 
 /******************************************************************************
 * Macros 
@@ -84,6 +50,17 @@ typedef unsigned char UCHAR; // for legacy
 /******************************************************************************
 * Types
 ******************************************************************************/
+/*
+// type definitions for 'original' sdhc.c 
+typedef unsigned int   LWord;
+typedef signed int     sLWord;
+typedef unsigned short  Word;
+typedef signed short    sWord;
+typedef unsigned char   Byte;
+typedef signed char     sByte;
+
+typedef unsigned char UCHAR; // for legacy
+
 typedef struct
 {
   DSTATUS status;
@@ -93,6 +70,8 @@ typedef struct
   LWord   numBlocks;
   LWord   lastCardStatus;
 }SD_CARD_DESCRIPTOR;
+*/
+/*
 
 typedef enum {
   SD_CARD_ERROR_NONE = 0,
@@ -140,6 +119,7 @@ typedef enum {
   SD_CARD_ERROR_WRITE_TIMEOUT,
   SD_CARD_ERROR_WRITE,
 } sd_error_code_t;
+*/
 /******************************************************************************
 * Global variables
 ******************************************************************************/
@@ -151,7 +131,7 @@ typedef enum {
 #ifdef __cplusplus
 extern "C"{
 #endif
-
+/*
 DSTATUS SDHC_InitCard(void);
 uint16_t SDHC_DMADone(void);
 void SDHC_DMAWait(void);
@@ -167,8 +147,18 @@ DRESULT SDHC_ReadBlocks(UCHAR* buff, DWORD sector, UCHAR count);
 DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count);
 //
 DSTATUS SDHC_CardIsReady(void);
+*/
+
+int SDHC_disk_status();
+int SDHC_disk_initialize();
+int SDHC_disk_read(BYTE *buff, DWORD sector, UINT count);
+int SDHC_disk_write(const BYTE *buff, DWORD sector, UINT count);
+int SDHC_ioctl(BYTE cmd, BYTE *buff);
+
 #ifdef __cplusplus
 }
 #endif
+
+
 
 #endif
