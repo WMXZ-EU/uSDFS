@@ -80,4 +80,4 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	* refactored library structure
 	* added SPI interface
 	* added Teensy 4 low-level interface
-	* prepared for USB disk (MSC)
+	* added MSC (USB disk) interface
