@@ -1,8 +1,7 @@
 //Copyright 2019 by Walter Zimmer
 // Version 07-may-19
 //
-#include "ff.h"
-#include "ff_utils.h"
+#include "uSDFS.h"
 
 #define TEST_DRV 1
 //
@@ -23,7 +22,7 @@ FIL fil;        /* File object */
   #define BUFFSIZE (2*1024) // size of buffer to be written
 #elif defined(__MK66FX1M0__)
   #define BUFFSIZE (8*1024) // size of buffer to be written
-#elif defined(__IMXRT0162__)
+#elif defined(__IMXRT1062__)
   #define BUFFSIZE (32*1024) // size of buffer to be written
 #endif
 
@@ -34,9 +33,6 @@ UINT wr;
 void die(char *str, FRESULT rc);
 void setup();
 void loop();
-
-extern "C" uint32_t usd_getError(void);
-struct tm seconds2tm(uint32_t tt);
 
 void die(char *str, FRESULT rc) 
 { Serial.printf("%s: Failed with rc=%u.\n", str, rc); for (;;) delay(100); }
@@ -84,7 +80,7 @@ void loop()
       //
       isFileOpen=0;
       t1=micros();
-      float MBs = (1000.0f*BUFFSIZE)/(1.0*(t1-t0));
+      float MBs = (1000.0f*BUFFSIZE*4.0f)/(1.0f*(t1-t0));
       Serial.printf(" (%d - %f MB/s)\n\r",t1-t0,MBs);
     }
   }
@@ -111,7 +107,7 @@ void loop()
         rc = f_close(&fil);
         if(rc == FR_INVALID_OBJECT)
         { Serial.println("unlinking file");
-          rc = f_unlink(wfilename);
+          rc = f_unlink(filename);
           if (rc) die("unlink", rc);
         }
         else
@@ -134,8 +130,7 @@ void loop()
      if(!(count%640)) Serial.println(); Serial.flush();
      //
      if ((rc = f_write(&fil, buffer, BUFFSIZE*4, &wr)) == FR_DISK_ERR) // IO error
-     {  uint32_t usd_error = usd_getError();
-        Serial.printf(" write FR_DISK_ERR : %x\n\r",usd_error);
+     {  Serial.println(" write FR_DISK_ERR");
         // only option is to close file
         // force closing file
         count=1000;
@@ -145,4 +140,3 @@ void loop()
      count %= 1000;
   }    
 }
-
