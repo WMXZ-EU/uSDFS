@@ -22,39 +22,46 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include "core_pins.h"  // include calls to kinetis.h or imxrt.h
+
 #include "sd_msc.h"
- 
-#define HAVE_MSC 1
+#include "sd_config.h"
+
+#if defined __MK66FX1M0__ || defined __MK64FX512__ || defined __IMXRT1062__ 
+	#define HAVE_MSC USE_MSC	//USE_MSC (0,1) is defined in sd_config
+#else
+	#define HAVE_MSC 0
+#endif
 
 #if HAVE_MSC == 1
-	#if defined __MK66FX1M0__ || defined __MK64FX512__
-		#include "msc.h"
-		#include "MassStorage.h"
+	#include <stdlib.h>
+	#include <string.h>
+	#include "usb_serial.h"
 
-		static int MSC_disk_status() {return 0;}
+	#include "msc.h"
+	#include "MassStorage.h"
 
-		static int MSC_disk_initialize() 
-		{	return mscInit();
-		}
+	int MSC_disk_status() {return 0;}
 
-		static int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) 
-		{
-			WaitDriveReady();
-			return readSectors((BYTE *)buff, sector, count);
-		}
+	int MSC_disk_initialize() 
+	{	return mscInit();
+	}
 
-		static int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count) 
-		{
-			WaitDriveReady();
-			return writeSectors((BYTE *)buff, sector, count);
-		}
+	int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) 
+	{	WaitDriveReady();
+		return readSectors((BYTE *)buff, sector, count);
+	}
 
-		static int MSC_ioctl(BYTE cmd, BYTE *buff) {return 0;}
-	#endif
+	int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count) 
+	{	WaitDriveReady();
+		return writeSectors((BYTE *)buff, sector, count);
+	}
+
+	int MSC_ioctl(BYTE cmd, BYTE *buff) {return 0;}
 #else
-	static int MSC_disk_status() {return 0;}
-	static int MSC_disk_initialize() {return 0;}
-	static int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) {return 0;}
-	static int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count) {return 0;}
-	static int MSC_ioctl(BYTE cmd, BYTE *buff) {return 0;}
+	int MSC_disk_status() {return 0;}
+	int MSC_disk_initialize() {return 0;}
+	int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) {return 0;}
+	int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count) {return 0;}
+	int MSC_ioctl(BYTE cmd, BYTE *buff) {return 0;}
 #endif

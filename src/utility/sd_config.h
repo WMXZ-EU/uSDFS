@@ -11,7 +11,7 @@ extern "C" {
 #define DEV_SDHC  1 /* Example: Map SDHC card to physical drive 1 */
 #define DEV_MSC   2 /* Example: Map MSC card (USB disk) to physical drive 2 */
 
-// SPI
+// SPI 
 #define CS_PIN 10
 
 #define DMA_TX 0
@@ -31,6 +31,9 @@ extern "C" {
 #define SDHC_DO4BITS                        1	// use 4 bit bus
 //#define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_SWPOLL
 #define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_DMA // not implemented yet
+
+//MSC
+#define USE_MSC 1	// will be used in sd_msc.cpp
 
 
 #ifdef __cplusplus

@@ -33,13 +33,15 @@
 #if defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__IMXRT1052__) || defined(__IMXRT1062__)
 
 #include "core_pins.h"  // include calls to kinetis.h or imxrt.h
-#include "usb_serial.h" // for Serial
 
 // for debugging inC
+/*
+#include "usb_serial.h" // for Serial
+#include <stdio.h>
 void logg(char c) {usb_serial_putchar(c); usb_serial_flush_output();}
 void logVar(char *str, uint32_t var) 
 {	char txt[80]; sprintf(txt,"%s: %x\n",str,var); usb_serial_write(txt, strlen(txt)+1); usb_serial_flush_output();}
-
+*/
 #include "../ff.h"
 #include "../diskio.h"
 
