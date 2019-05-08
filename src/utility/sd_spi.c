@@ -25,7 +25,7 @@
  
 #include <stddef.h>
 #include "core_pins.h"
-#include "usb_serial.h"
+//#include "usb_serial.h"
 //#define DO_DEBUG
 
 #include "../ff.h"

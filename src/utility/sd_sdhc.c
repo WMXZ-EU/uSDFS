@@ -40,7 +40,7 @@
 #include <stdio.h>
 void logg(char c) {usb_serial_putchar(c); usb_serial_flush_output();}
 void logVar(char *str, uint32_t var) 
-{	char txt[80]; sprintf(txt,"%s: %x\n",str,var); usb_serial_write(txt, strlen(txt)+1); usb_serial_flush_output();}
+{	char txt[80]; sprintf(txt,"%s: 0x%x\n",str,var); usb_serial_write(txt, strlen(txt)+1); usb_serial_flush_output();}
 */
 #include "../ff.h"
 #include "../diskio.h"
@@ -125,13 +125,11 @@ int SDHC_disk_read(BYTE *buff, DWORD sector, UINT count)
 }
 
 int SDHC_disk_write(const BYTE *buff, DWORD sector, UINT count)
-{
-	return sd_CardWriteBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
+{	return sd_CardWriteBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
 }
 
 int SDHC_ioctl(BYTE cmd, BYTE *buff)
-{
-    return RES_OK;
+{   return RES_OK;
 }
 
 
@@ -330,7 +328,6 @@ static uint8_t sd_Init(void)
   
   // De-init GPIO - to prevent unwanted clocks on bus
   sd_ReleaseGPIO();
-
   #if defined (__IMXRT1052__) || defined (__IMXRT1062__)
     SDHC_SYSCTL   |= 0xF;
     SDHC_MIX_CTRL |= 0x80000000;
@@ -381,8 +378,6 @@ static uint8_t sd_Init(void)
     SDHC_SYSCTL |= SDHC_SYSCTL_INITA;
     while (SDHC_SYSCTL & SDHC_SYSCTL_INITA) ;
   }
-
-//  Serial.print("Card inserted: "); Serial.println(SDHC_PRSSTAT & SDHC_PRSSTAT_CINS,HEX);
 
   if(!(SDHC_PRSSTAT & SDHC_PRSSTAT_CINS)) return SDHC_STATUS_NODISK;
   return 0;
@@ -546,7 +541,7 @@ int sd_CardReadBlocks(void * buff, uint32_t sector, uint32_t count)
   // Check if this is ready
   if (sdCardDesc.status != 0) return SDHC_RESULT_NOT_READY;
 
-  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB));
+	while(SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) ;
 
   // clear status
   SDHC_IRQSTAT = SDHC_IRQSTAT;
@@ -593,7 +588,10 @@ int sd_CardReadBlocks(void * buff, uint32_t sector, uint32_t count)
   while(!dmaDone);
   SDHC_IRQSTAT &= (SDHC_IRQSTAT_CC | SDHC_IRQSTAT_TC);
 
-//  return SDHC_CMD12_StopTransfer(); // should be called when transfer error
+	// Auto CMD12 is enabled for DMA so call it if DMA error
+	if((SDHC_DSADDR < buff+(count*512)) && (count>1))
+		result=sd_CMD12_StopTransferWaitForBusy();
+
   return result;
 }
 
@@ -626,7 +624,7 @@ int sd_CardWriteBlocks(const void * buff, uint32_t sector, uint32_t count)
   // Check if this is ready
   if (sdCardDesc.status != 0) return SDHC_RESULT_NOT_READY;
 
-  while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB)) ;
+	while(SDHC_PRSSTAT & (SDHC_PRSSTAT_CIHB | SDHC_PRSSTAT_CDIHB | SDHC_PRSSTAT_DLA)) ;
 
   // clear status
   SDHC_IRQSTAT = SDHC_IRQSTAT;
@@ -663,7 +661,6 @@ int sd_CardWriteBlocks(const void * buff, uint32_t sector, uint32_t count)
   // enable DMA
   dmaDone=0;
   SDHC_DSADDR  = (uint32_t)buff;
-  SDHC_ADSADDR  = 0;
   //
   // send write command
   SDHC_CMDARG = sector;
@@ -671,14 +668,17 @@ int sd_CardWriteBlocks(const void * buff, uint32_t sector, uint32_t count)
   //
   // wait for  DMA to finish
   while(!dmaDone);
+
   SDHC_IRQSTAT &= (SDHC_IRQSTAT_CC | SDHC_IRQSTAT_TC);
   while(SDHC_PRSSTAT & SDHC_PRSSTAT_DLA);
 
   //check for SD status (if data are written?)
   result = sd_CMD13_WaitForReady(sdCardDesc.address);
-  if(result != SDHC_RESULT_OK) return result;
 
-//  return SDHC_CMD12_StopTransfer(); // should be called when transfer error
+	// Auto CMD12 is enabled for DMA so call it when transfer error
+	if((result != SDHC_RESULT_OK) && (count>1))
+		result=sd_CMD12_StopTransferWaitForBusy();
+  
   return result;
 }
 
@@ -720,6 +720,8 @@ static int sd_CMD(uint32_t xfertyp, uint32_t arg)
   { SDHC_IRQSTAT |= mask;
     return SDHC_RESULT_ERROR;
   }
+  return SDHC_RESULT_OK;
+  
   /* Check card removal */
   if (SDHC_IRQSTAT & SDHC_IRQSTAT_CRM) 
   {   SDHC_IRQSTAT |= SDHC_IRQSTAT_CTOE | SDHC_IRQSTAT_CC;
@@ -826,27 +828,18 @@ static int sd_CMD12_StopTransferWaitForBusy(void)
 //
 static int sd_CMD13_Check_Status(uint32_t address){  return sd_CMD(SDHC_CMD13_XFERTYP, address);}
 
+#define CARD_STATUS_READY_FOR_DATA	(1UL << 8)
 // ---------- sends CMD13 to check uSD status and wait for ready
 static int sd_CMD13_WaitForReady(uint32_t address)
 { int result;
   do
-  { //while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB)) ;
+  { while ((SDHC_PRSSTAT & SDHC_PRSSTAT_CIHB) || (SDHC_PRSSTAT & SDHC_PRSSTAT_CDIHB)) ;
     SDHC_IRQSTATEN |= SDHC_IRQSTATEN_CCSEN;
     SDHC_IRQSTAT=SDHC_IRQSTAT;
     // CMD13 to check uSD status
     result = sd_CMD13_Check_Status(sdCardDesc.address);
     if (result != SDHC_RESULT_OK)  return result;
-/*
-    xfertyp = (SDHC_XFERTYP_CMDINX(SDHC_CMD13) | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48));
-    //
-    
-    SDHC_CMDARG = sdCardDesc.address;
-    SDHC_XFERTYP = SDHC_CMD13_XFERTYP; //xfertyp;
-    
-    while(!(SDHC_IRQSTAT & SDHC_IRQSTAT_CC)); SDHC_IRQSTAT &= SDHC_IRQSTAT_CC;
-    Resp =SDHC_CMDRSP0; 
-*/
-  } while(SDHC_CMDRSP0 & 0x200); // while data?
+  } while(!((SDHC_CMDRSP0 & CARD_STATUS_READY_FOR_DATA)==CARD_STATUS_READY_FOR_DATA)); // while data?
   return SDHC_RESULT_OK;
 }
 
@@ -957,7 +950,6 @@ int SDHC_disk_initialize()
 		c_size = (SDHC_CMDRSP1 >> 8) & 0x003FFFFF;
 		sdCardDesc.numBlocks = (c_size + 1) << 10;
 	}
-logg('g');
 
 	if(!sdhc_CMD(SDHC_CMD10_XFERTYP,sdCardDesc.address)) {SDHC_ERROR(STA_NOINIT, SD_CARD_ERROR_CMD10);}
 	else
