@@ -40,11 +40,14 @@
 
 	#include "msc.h"
 	#include "MassStorage.h"
+	
+	USBHost myusb;
 
 	int MSC_disk_status() {return 0;}
 
 	int MSC_disk_initialize() 
-	{	return mscInit();
+	{	myusb.begin();
+		return mscInit();
 	}
 
 	int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) 
