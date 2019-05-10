@@ -149,11 +149,11 @@ DRESULT SDHC_WriteBlocks(UCHAR* buff, DWORD sector, UCHAR count);
 DSTATUS SDHC_CardIsReady(void);
 */
 
-int SDHC_disk_status();
-int SDHC_disk_initialize();
-int SDHC_disk_read(BYTE *buff, DWORD sector, UINT count);
-int SDHC_disk_write(const BYTE *buff, DWORD sector, UINT count);
-int SDHC_ioctl(BYTE cmd, BYTE *buff);
+DSTATUS SDHC_disk_status();
+DSTATUS SDHC_disk_initialize();
+DRESULT SDHC_disk_read(BYTE *buff, DWORD sector, UINT count);
+DRESULT SDHC_disk_write(const BYTE *buff, DWORD sector, UINT count);
+DRESULT SDHC_disk_ioctl(BYTE cmd, BYTE *buff);
 
 #ifdef __cplusplus
 }

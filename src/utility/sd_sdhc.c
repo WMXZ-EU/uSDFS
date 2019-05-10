@@ -52,6 +52,25 @@ void logVar(char *str, uint32_t var)
 /******************************************************************************
   Types
 ******************************************************************************/
+#ifdef OLD
+/* Status of Disk Functions */
+typedef BYTE	DSTATUS;
+
+/* Results of Disk Functions */
+
+typedef enum {
+	RES_OK = 0,		/* 0: Successful */
+	RES_ERROR,		/* 1: R/W Error */
+	RES_WRPRT,		/* 2: Write Protected */
+	RES_NOTRDY,		/* 3: Not Ready */
+	RES_PARERR,		/* 4: Invalid Parameter */
+    RES_NONRSPNS,   /* 5: No Response */ // from old diskio.h
+	RES_READERROR,  /* 6: Read Error */
+	RES_WRITEERROR  /* 7: Write Error */
+} DRESULT;
+
+#endif
+
 enum {
   SDHC_RESULT_OK = 0,             /* 0: Successful */
   SDHC_RESULT_ERROR,              /* 1: R/W Error */
@@ -112,23 +131,23 @@ static int sd_CMD13_WaitForReady(uint32_t address);
 
 ******************************************************************************/
 
-int SDHC_disk_status()
-{	return sdCardDesc.status;
+DSTATUS SDHC_disk_status()
+{	return (DSTATUS) sdCardDesc.status;
 }
 
-int SDHC_disk_initialize()
-{	return sd_CardInit();
+DSTATUS SDHC_disk_initialize()
+{	return (DSTATUS) sd_CardInit();
 }
 
-int SDHC_disk_read(BYTE *buff, DWORD sector, UINT count)
-{	return sd_CardReadBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
+DRESULT SDHC_disk_read(BYTE *buff, DWORD sector, UINT count)
+{	return (DRESULT) sd_CardReadBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
 }
 
-int SDHC_disk_write(const BYTE *buff, DWORD sector, UINT count)
-{	return sd_CardWriteBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
+DRESULT SDHC_disk_write(const BYTE *buff, DWORD sector, UINT count)
+{	return (DRESULT) sd_CardWriteBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
 }
 
-int SDHC_ioctl(BYTE cmd, BYTE *buff)
+DRESULT SDHC_disk_ioctl(BYTE cmd, BYTE *buff)
 {   return RES_OK;
 }
 

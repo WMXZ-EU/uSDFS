@@ -32,11 +32,11 @@ extern "C"
 #endif
 #include "sd_config.h"
 
-int SPI_disk_status();
-int SPI_disk_initialize();
-int SPI_disk_read(BYTE *buff, DWORD sector, UINT count);
-int SPI_disk_write(const BYTE *buff, DWORD sector, UINT count);
-int SPI_ioctl(BYTE cmd, BYTE *buff);
+DSTATUS SPI_disk_status();
+DSTATUS SPI_disk_initialize();
+DRESULT SPI_disk_read(BYTE *buff, DWORD sector, UINT count);
+DRESULT SPI_disk_write(const BYTE *buff, DWORD sector, UINT count);
+DRESULT SPI_disk_ioctl(BYTE cmd, BYTE *buff);
 
 #ifdef __cplusplus
 }

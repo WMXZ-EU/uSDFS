@@ -50,47 +50,50 @@ uint16_t sd_writeData2(const uint8_t* src) ;
 uint16_t sd_readBlock(uint32_t blockNumber, uint8_t* dst);
 uint16_t sd_writeBlock(uint32_t blockNumber, const uint8_t* src) ;
 
-int SPI_disk_status()
+DSTATUS SPI_disk_status()
 {
-    return RES_OK;
+    return 0;
 }
-int SPI_disk_initialize()
+DSTATUS SPI_disk_initialize()
 {
-    sd_init(CS_PIN);
+    if(!sd_init(CS_PIN)) return STA_NOINIT;
     
-    return RES_OK;
+    return 0;
 }
 
-int SPI_disk_read(BYTE *buff, DWORD sector, UINT count)
-{
-    sd_readStart(sector);
+DRESULT SPI_disk_read(BYTE *buff, DWORD sector, UINT count)
+{	
+	DRESULT res = RES_OK;
+    if(!sd_readStart(sector)) res = RES_READERROR;
     for(int ii=0; ii<count;ii++)
     {
-      sd_readData2(buff);
+      if(!sd_readData2(buff)) res = RES_READERROR;
       sector++;
       buff += 512;    
     }
-    sd_readStop();
+    if(!sd_readStop()) res = RES_READERROR;
 
-    return RES_OK;
+    return res;
 }
-int SPI_disk_write(const BYTE *buff, DWORD sector, UINT count)
+DRESULT SPI_disk_write(const BYTE *buff, DWORD sector, UINT count)
 {
-    sd_writeStart(sector,count);
+    DRESULT res = RES_OK;
+    if(!sd_writeStart(sector,count)) res = RES_WRITEERROR;
     for(int ii=0; ii<count;ii++)
     {
-      sd_writeData2(buff);
+      if(!sd_writeData2(buff)) res = RES_WRITEERROR;
       sector++;
       buff += 512;    
     }
-    sd_writeStop();
+    if(!sd_writeStop()) res = RES_WRITEERROR;
 
-    return RES_OK;
+    return res;
 }
-int SPI_ioctl(BYTE cmd, BYTE *buff)
+DRESULT SPI_disk_ioctl(BYTE cmd, BYTE *buff)
 {
     return RES_OK;
 }
+
 #if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) \
 		|| defined(__IMXRT1052__) || defined(__IMXRT1062__) 
 
@@ -819,12 +822,12 @@ uint16_t sd_writeStop(void)
 #if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
 
 	#if defined(__MK20DX128__) || defined(__MK20DX256__)
-		static KINETISK_SPI_t * SPI[] = {(KINETISK_SPI_t *)0x4002C000};
+//		static KINETISK_SPI_t * SPI[] = {(KINETISK_SPI_t *)0x4002C000}; // does not compile with C, inly C++
 
 		uint16_t DMAMUX_SOURCE_SPI_RX[] = {DMAMUX_SOURCE_SPI0_RX};
 		uint16_t DMAMUX_SOURCE_SPI_TX[] = {DMAMUX_SOURCE_SPI0_TX};
 	#elif defined(__MK64FX512__) || defined(__MK66FX1M0__)
-		static KINETISK_SPI_t * SPI[3] = {(KINETISK_SPI_t *)0x4002C000, (KINETISK_SPI_t *)0x4002D000, (KINETISK_SPI_t *)0x400AC000};
+//		static KINETISK_SPI_t * SPI[3] = {(KINETISK_SPI_t *)0x4002C000, (KINETISK_SPI_t *)0x4002D000, (KINETISK_SPI_t *)0x400AC000};
 
 		uint16_t DMAMUX_SOURCE_SPI_RX[] = {DMAMUX_SOURCE_SPI0_RX, DMAMUX_SOURCE_SPI1_RX, DMAMUX_SOURCE_SPI2_RX};
 		uint16_t DMAMUX_SOURCE_SPI_TX[] = {DMAMUX_SOURCE_SPI0_TX, DMAMUX_SOURCE_SPI1_TX, DMAMUX_SOURCE_SPI2_TX};
@@ -1183,12 +1186,12 @@ uint16_t sd_writeStop(void)
 		return;
 	}
 
-
+/* does not compile with C ony with C++
 	static IMXRT_LPSPI_t *SPIX[]= {( IMXRT_LPSPI_t*)0x40394000, 
 									( IMXRT_LPSPI_t*)0x40398000, 
 									( IMXRT_LPSPI_t*)0x4039C000, 
 									( IMXRT_LPSPI_t*)0x403A0000};
-
+*/
 	#define ISPI 3
 	#if ISPI==2
 		#define spi (( IMXRT_LPSPI_t*)0x4039C000)

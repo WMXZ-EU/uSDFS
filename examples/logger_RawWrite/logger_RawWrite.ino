@@ -29,11 +29,7 @@ FIL fil;        /* File object */
 uint32_t buffer[BUFFSIZE];
 UINT wr;
 
-/* Stop with dying message */
-void die(char *str, FRESULT rc);
-void setup();
-void loop();
-
+/* Stop with error message */
 void die(char *str, FRESULT rc) 
 { Serial.printf("%s: Failed with rc=%u.\n", str, rc); for (;;) delay(100); }
 
@@ -92,7 +88,7 @@ void loop()
     ifn++;
     if(ifn>MXFN) { pinMode(13,OUTPUT); return; } // at end of test: prepare for blinking
 
-    sprintf(filename,"X_%05d.dat",ifn);
+    sprintf(filename,"Y_%05d.dat",ifn);
     Serial.println(filename);
     //
     // check status of file
@@ -129,7 +125,8 @@ void loop()
      if(!(count%10))Serial.printf(".");
      if(!(count%640)) Serial.println(); Serial.flush();
      //
-     if ((rc = f_write(&fil, buffer, BUFFSIZE*4, &wr)) == FR_DISK_ERR) // IO error
+     rc = f_write(&fil, buffer, BUFFSIZE*4, &wr);
+     if (rc == FR_DISK_ERR) // IO error
      {  Serial.println(" write FR_DISK_ERR");
         // only option is to close file
         // force closing file

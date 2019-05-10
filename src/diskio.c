@@ -22,30 +22,16 @@ DSTATUS disk_status (
 	BYTE pdrv		/* Physical drive nmuber to identify the drive */
 )
 {
-	DSTATUS stat=0;
-	int result;
 
 	switch (pdrv) {
 	case DEV_SPI :
-		result = SPI_disk_status();
-
-		// translate the reslut code here
-
-		return stat;
+		return SPI_disk_status();
 
 	case DEV_SDHC :
-		result = SDHC_disk_status();
-
-		// translate the reslut code here
-
-		return stat;
+		return SDHC_disk_status();
 
 	case DEV_MSC :
-		result = MSC_disk_status();
-
-		// translate the reslut code here
-
-		return stat;
+		return MSC_disk_status();
 	}
 	return STA_NOINIT;
 }
@@ -201,27 +187,29 @@ DRESULT disk_ioctl (
 	void *buff		/* Buffer to send/receive control data */
 )
 {
-	DRESULT res=RES_OK;
-	int result;
+//	DRESULT res=RES_OK;
 
 	switch (pdrv) {
 	case DEV_SPI :
+		return SPI_disk_ioctl(cmd,buff);
 
 		// Process of the command for the SPI drive
 
-		return res;
+//		return res;
 
 	case DEV_SDHC :
+		return SDHC_disk_ioctl(cmd,buff);
 
 		// Process of the command for the SDHC device
 
-		return res;
+//		return res;
 
 	case DEV_MSC :
+		return SDHC_disk_ioctl(cmd,buff);
 
 		// Process of the command for the SDHC device
 
-		return res;
+//		return res;
 
 		}
 

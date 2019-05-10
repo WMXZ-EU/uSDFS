@@ -62,9 +62,9 @@ uint32_t tm2seconds(struct tm tx)
 
   return tt;
 }
-
 #if defined(__IMXRT1052__) || defined(__IMXRT1062__)
 
+#ifdef XXXXXXXXXXXXXX
     /*********************************************************************************/
     // see also https://github.com/manitou48/teensy4/blob/master/rtc.ino
     #define SNVS_DEFAULT_PGD_VALUE (0x41736166U)
@@ -123,6 +123,7 @@ uint32_t tm2seconds(struct tm tx)
     #define SNVS_LPCR_GPR_Z_DIS(x)          (((uint32_t)(((uint32_t)(x)) << 24U)) & SNVS_LPCR_GPR_Z_DIS_MASK)
 
     #define SNVS_LPSR_LPTA                  (0x1U)
+#endif
 
     void rtc_init() 
     { CCM_CCGR2 |= CCM_CCGR2_IOMUXC_SNVS(CCM_CCGR_ON);

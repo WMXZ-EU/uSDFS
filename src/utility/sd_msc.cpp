@@ -24,6 +24,7 @@
  */
 #include "core_pins.h"  // include calls to kinetis.h or imxrt.h
 
+#include "../diskio.h"
 #include "sd_msc.h"
 #include "sd_config.h"
 
@@ -37,13 +38,18 @@
 	#include <stdlib.h>
 	#include <string.h>
 	#include "usb_serial.h"
-
 	#include "msc.h"
 	#include "MassStorage.h"
 	
 	USBHost myusb;
 
-	int MSC_disk_status() {return 0;}
+	int MSC_disk_status() 
+	{	
+		int stat = 0;
+		if(!deviceAvailable()) stat = STA_NODISK; 	// No USB Mass Storage Device Connected
+		if(!deviceInitialized()) stat = STA_NOINIT; // USB Mass Storage Device Un-Initialized
+		return stat;
+	}
 
 	int MSC_disk_initialize() 
 	{	myusb.begin();
@@ -62,9 +68,9 @@
 
 	int MSC_ioctl(BYTE cmd, BYTE *buff) {return 0;}
 #else
-	int MSC_disk_status() {return 0;}
-	int MSC_disk_initialize() {return 0;}
-	int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) {return 0;}
-	int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count) {return 0;}
-	int MSC_ioctl(BYTE cmd, BYTE *buff) {return 0;}
+	int MSC_disk_status() {return STA_NOINIT;}
+	int MSC_disk_initialize() {return STA_NOINIT;}
+	int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) {return STA_NOINIT;}
+	int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count) {return STA_NOINIT;}
+	int MSC_ioctl(BYTE cmd, BYTE *buff) {return STA_NOINIT;}
 #endif
