@@ -2,18 +2,18 @@
 /*
 * for APL see http://elm-chan.org/fsw/ff/00index_e.html
 */
-#define TEST_DRV 1
+#define TEST_DRV 2
 //
 #if TEST_DRV == 0
   const char *Dev = "0:/";  // SPI
 #elif TEST_DRV == 1
-  const char *Dev = "1:/";  //SDHC
+  const char *Dev = "1:/";  // SDHC
 #elif TEST_DRV == 2
-  const char *Dev = "2:/";  //USB
+  const char *Dev = "2:/";  // USB
 #endif
 
-const char *FileNameTxt = "/Ascii/HELLO12.TXT";
-const char *FileNameBin = "/Binary/test01.bin";
+const char *FileNameTxt = "/Ascii/HELLO13.TXT";
+const char *FileNameBin = "/Binary/test03.bin";
 
 FRESULT rc;       /* Result code */
 FATFS fatfs;      /* File system object */
@@ -28,7 +28,7 @@ TCHAR *str;
 uint8_t buffer[BUFFSIZE];
 
 void die(const char *text, FRESULT rc)
-{ Serial.printf("%s: Failed with rc=%u.\r\n", text,rc);  while(1) asm("wfi"); }
+{ Serial.printf("%s: Failed with rc=%s.\r\n", text,FR_ERROR_STRING(rc));  while(1) asm("wfi"); }
 
 void setup() {
   // put your setup code here, to run once:
