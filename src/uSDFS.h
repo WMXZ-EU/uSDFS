@@ -1,6 +1,6 @@
 #include "ff.h"
 
-const char *STAT_ERROR_STRING = {
+const char *STAT_ERROR_STRING[] = {
 	"STA_OK", //		0x00	/* No error */
 	"STA_NOINIT", //		0x01	/* Drive not initialized */
 	"STA_NODISK", //		0x02	/* No medium in the drive */

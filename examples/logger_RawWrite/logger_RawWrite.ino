@@ -25,13 +25,14 @@ FIL fil;        /* File object */
 #elif defined(__IMXRT1062__)
   #define BUFFSIZE (32*1024) // size of buffer to be written
 #endif
+char *fnamePrefix = "Z";
 
 uint32_t buffer[BUFFSIZE];
 UINT wr;
 
 /* Stop with error message */
-void die(char *str, FRESULT rc) 
-{ Serial.printf("%s: Failed with rc=%u.\n", str, rc); for (;;) delay(100); }
+void die(const char *text, FRESULT rc)
+{ Serial.printf("%s: Failed with rc=%s.\r\n", text,FR_ERROR_STRING[rc]);  while(1) asm("wfi"); }
 
 //=========================================================================
 void blink(uint16_t msec)
@@ -63,6 +64,8 @@ void loop()
 	static char filename[80];
 	static uint32_t t0=0;
 	static uint32_t t1=0;
+  static uint32_t dtwmin=1<<31, dtwmax=0;
+  static uint32_t dto=1<<31, dtc=0;
 
   if(ifn>MXFN) { blink(500); return; }
   
@@ -70,14 +73,17 @@ void loop()
   {
     // close file
     if(isFileOpen)
-    {
+    { dtc = micros();
       //close file
       if (rc = f_close(&fil)) die("close", rc);
       //
       isFileOpen=0;
       t1=micros();
+      dtc = t1-dtc;
       float MBs = (1000.0f*BUFFSIZE*4.0f)/(1.0f*(t1-t0));
-      Serial.printf(" (%d - %f MB/s)\n\r",t1-t0,MBs);
+      Serial.printf(" (%d - %f MB/s)\n (open: %d us; close: %d us; write: min,max: %d %d us)\n\r",
+                        t1-t0,MBs, dto, dtc, dtwmin,dtwmax);
+      dtwmin=1<<31; dtwmax=0;
     }
   }
     
@@ -88,7 +94,8 @@ void loop()
     ifn++;
     if(ifn>MXFN) { pinMode(13,OUTPUT); return; } // at end of test: prepare for blinking
 
-    sprintf(filename,"Y_%05d.dat",ifn);
+    dto=micros();
+    sprintf(filename,"%s_%05d.dat",fnamePrefix,ifn);
     Serial.println(filename);
     //
     // check status of file
@@ -108,12 +115,13 @@ void loop()
         }
         else
           die("close", rc);
+      // retry open file
+      if(rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS)) die("open", rc);
     }
-    // retry open file
-    if(rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS)) die("open", rc);
     
     isFileOpen=1;
     t0=micros();
+    dto=t0-dto;
   }
   
   if(isFileOpen)
@@ -125,7 +133,9 @@ void loop()
      if(!(count%10))Serial.printf(".");
      if(!(count%640)) Serial.println(); Serial.flush();
      //
+     uint32_t ta=micros();
      rc = f_write(&fil, buffer, BUFFSIZE*4, &wr);
+     uint32_t tb=micros();
      if (rc == FR_DISK_ERR) // IO error
      {  Serial.println(" write FR_DISK_ERR");
         // only option is to close file
@@ -134,6 +144,10 @@ void loop()
      }
      else if(rc) die("write",rc);
     //    
+     uint32_t dt=tb-ta;
+     if(dt<dtwmin) dtwmin=dt;
+     if(dt>dtwmax) dtwmax=dt;
+     //
      count %= 1000;
   }    
 }

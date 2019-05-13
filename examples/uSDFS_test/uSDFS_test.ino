@@ -28,7 +28,7 @@ TCHAR *str;
 uint8_t buffer[BUFFSIZE];
 
 void die(const char *text, FRESULT rc)
-{ Serial.printf("%s: Failed with rc=%s.\r\n", text,FR_ERROR_STRING(rc));  while(1) asm("wfi"); }
+{ Serial.printf("%s: Failed with rc=%s.\r\n", text,FR_ERROR_STRING[rc]);  while(1) asm("wfi"); }
 
 void setup() {
   // put your setup code here, to run once:
