@@ -2710,7 +2710,7 @@ static void get_fileinfo (
 		if (di == 0) {	/* If LFN and SFN both are invalid, this object is inaccesible */
 			fno->fname[di++] = '?';
 		} else {
-			for (si = di = 0; lcf = NS_BODY; fno->altname[si]; si++, di++) {	/* Copy altname[] to fname[] with case information */
+			for (si = di = 0, lcf = NS_BODY; fno->altname[si]; si++, di++) {	/* Copy altname[] to fname[] with case information */
 				wc = (WCHAR)fno->altname[si];
 				if (wc == '.') lcf = NS_EXT;
 				if (IsUpper(wc) && (dp->dir[DIR_NTres] & lcf)) wc += 0x20;
