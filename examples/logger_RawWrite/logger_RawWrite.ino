@@ -103,7 +103,7 @@ void loop()
     Serial.printf("stat %s %x\n",FR_ERROR_STRING[rc],fil.obj.sclust);
     
     rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS);
-    Serial.printf(" opened %d %x\n\r",rc,fil.obj.sclust);
+    Serial.printf(" opened %s %x\n\r",FR_ERROR_STRING[rc],fil.obj.sclust);
     // check if file is Good
     if(rc == FR_INT_ERR)
     { // only option is to close file
