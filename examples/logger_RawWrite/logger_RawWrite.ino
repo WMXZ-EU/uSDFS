@@ -100,7 +100,7 @@ void loop()
     //
     // check status of file
     rc = f_stat(filename,0);
-    Serial.printf("stat %d %x\n",rc,fil.obj.sclust);
+    Serial.printf("stat %s %x\n",FR_ERROR_STRING[rc],fil.obj.sclust);
     
     rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS);
     Serial.printf(" opened %d %x\n\r",rc,fil.obj.sclust);
