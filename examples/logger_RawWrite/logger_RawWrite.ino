@@ -150,7 +150,7 @@ void loop()
      rc = f_write(&fil, buffer, BUFFSIZE*4, &wr);
      uint32_t tb=micros();
      if (rc == FR_DISK_ERR) // IO error
-     {  Serial.println(" write FR_DISK_ERR");
+     {  Serial.printf(" write FR_DISK_ERR at count # %d\n",count);
         // only option is to close file
         // force closing file
         count=1000;
