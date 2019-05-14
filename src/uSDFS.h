@@ -30,3 +30,5 @@ const char *FR_ERROR_STRING[] = {
 	"FR_TOO_MANY_OPEN_FILES",	/* (18) Number of open files > FF_FS_LOCK */
 	"FR_INVALID_PARAMETER"	/* (19) Given parameter is invalid */
 };
+
+const char *fileSystem[] = {"No FS", "FS_FAT12","FS_FAT!6","FS_FAT32","FS_EXFAT"};

@@ -3,7 +3,7 @@
 //
 #include "uSDFS.h"
 
-#define TEST_DRV 1
+#define TEST_DRV 2
 //
 #if TEST_DRV == 0
   const char *Dev = "0:/";  // SPI
@@ -23,9 +23,9 @@ FIL fil;        /* File object */
 #elif defined(__MK66FX1M0__)
   #define BUFFSIZE (8*1024) // size of buffer to be written
 #elif defined(__IMXRT1062__)
-  #define BUFFSIZE (32*1024) // size of buffer to be written
+  #define BUFFSIZE (8*1024) // size of buffer to be written
 #endif
-char *fnamePrefix = "Z";
+char *fnamePrefix = "A";
 
 uint32_t buffer[BUFFSIZE];
 UINT wr;
@@ -48,9 +48,18 @@ void setup()
 
   while(!Serial);
   Serial.println("Test logger_RawWrite");
-  Serial.println(Dev);
+  Serial.print("BUFFSIZE :");  Serial.println(BUFFSIZE);
+  Serial.print("Dev Type :");  Serial.println(Dev);
   if((rc = f_mount (&fatfs, Dev, 1))) die("Mount",rc);      /* Mount/Unmount a logical drive */
 
+  Serial.printf("File System %s\n", fileSystem[fatfs.fs_type]);
+  Serial.printf("Free Disk Size %d clusters\n",fatfs.free_clst);
+  Serial.printf("Cluster Size %d sectors\n",fatfs.csize);
+#if FF_MAX_SS != FF_MIN_SS
+  Serial.printf("Sector Size %d bytes\n",fatfs.ssize);
+#else
+  Serial.printf("Sector Size %d bytes\n",FF_MIN_SS);
+#endif
   //-----------------------------------------------------------
   Serial.printf("\nChange drive\n");
   if((rc = f_chdrive(Dev))) die("chdrive",rc);
@@ -92,7 +101,11 @@ void loop()
   {
     // open new file
     ifn++;
-    if(ifn>MXFN) { pinMode(13,OUTPUT); return; } // at end of test: prepare for blinking
+    if(ifn>MXFN) 
+    { rc = f_unmount(Dev);
+      Serial.print("unmount "); Serial.println(FR_ERROR_STRING[rc]);
+      pinMode(13,OUTPUT); return; 
+    } // at end of test: prepare for blinking
 
     dto=micros();
     sprintf(filename,"%s_%05d.dat",fnamePrefix,ifn);
@@ -118,7 +131,7 @@ void loop()
       // retry open file
       if(rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS)) die("open", rc);
     }
-    
+    //
     isFileOpen=1;
     t0=micros();
     dto=t0-dto;
