@@ -111,6 +111,9 @@ char *fnamePrefix = "A";
     tt+=(days*24*3600);
     return tt;
   }
+#else
+  #include <time.h>
+  extern "C" struct tm seconds2tm(uint32_t tt);
 #endif
 
 #if  USE_FS == SDo
@@ -450,6 +453,55 @@ class Logger_class
 
 class Logger_class mLogger;
 
+/********** RTC ***************/
+void rtc_init() 
+{ CCM_CCGR2 |= CCM_CCGR2_IOMUXC_SNVS(CCM_CCGR_ON);
+  SNVS_LPGPR = SNVS_DEFAULT_PGD_VALUE;
+  SNVS_LPSR = SNVS_LPSR_PGD_MASK;
+  // ? calibration
+  // ? tamper pins
+  
+  SNVS_LPCR &= ~SNVS_LPCR_LPTA_EN_MASK; // clear alarm
+  while (SNVS_LPCR & SNVS_LPCR_LPTA_EN_MASK); 
+  SNVS_LPTAR=0;
+
+  SNVS_LPCR |= 1;             // start RTC
+  while (!(SNVS_LPCR & 1));
+}
+
+void rtc_set_time(uint32_t secs) 
+{ //uint32_t secs = 1547051415;
+  SNVS_LPCR &= ~1;   // stop RTC
+  while (SNVS_LPCR & 1);
+  SNVS_LPSRTCMR = (uint32_t)(secs >> 17U);
+  SNVS_LPSRTCLR = (uint32_t)(secs << 15U);
+  SNVS_LPCR |= 1;             // start RTC
+  while (!(SNVS_LPCR & 1));
+}
+
+uint32_t rtc_secs() {
+  uint32_t seconds = 0;
+  uint32_t tmp = 0;
+
+  /* Do consecutive reads until value is correct */
+  do
+  { seconds = tmp;
+    tmp = (SNVS_LPSRTCMR << 17U) | (SNVS_LPSRTCLR >> 15U);
+  } while (tmp != seconds);
+
+  return seconds;
+}
+
+ //needs definition in arduino build (compare with T3)
+ //teensy4b2.build.flags.ld=-Wl,--gc-sections,--relax,--defsym=__rtc_localtime={extra.time.local} "-T{build.core.path}/imxrt1062.ld"
+extern void *__rtc_localtime;
+void rtc_sync(void)
+{
+  rtc_init();
+  if((uint32_t)&__rtc_localtime > (rtc_secs()+10))
+    rtc_set_time((uint32_t)&__rtc_localtime);   //LPSRTC will start at 0 otherwise
+
+}
 //=========================================================================
 void blink(uint16_t msec) { digitalWriteFast(13,!digitalReadFast(13)); delay(msec); }
 
@@ -459,8 +511,14 @@ void setup()
   pinMode(13,OUTPUT);
   pinMode(13,HIGH);
 
+  rtc_sync();
+  struct tm tx;
+  tx=seconds2tm(rtc_secs());
+  
   while(!Serial);
   Serial.println("Test logger_RawWrite");
+  Serial.printf("%4d-%02d-%02d %02d:%02d:%02d\n",
+                tx.tm_year, tx.tm_mon, tx.tm_mday,tx.tm_hour, tx.tm_min, tx.tm_sec);  
   Serial.print("BUFFSIZE :");  Serial.println(BUFFSIZE);
   Serial.print("Dev Type :");  Serial.println(TEST_DRV);
   mLogger.init();
