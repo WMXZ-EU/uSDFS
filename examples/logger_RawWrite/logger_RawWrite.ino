@@ -5,6 +5,11 @@
 
 #define TEST_DRV 2
 //
+#define MXFN 1 // maximal number of files //was 100
+#define MXRC 2 // number of records in file // was 1000
+char *fnamePrefix = "A";
+
+//
 #if TEST_DRV == 0
   const char *Dev = "0:/";  // SPI
 #elif TEST_DRV == 1
@@ -17,7 +22,6 @@ FRESULT rc;        /* Result code */
 FATFS fatfs;      /* File system object */
 FIL fil;        /* File object */
 
-#define MXFN 100 // maximal number of files 
 #if defined(__MK20DX256__)
   #define BUFFSIZE (2*1024) // size of buffer to be written
 #elif defined(__MK66FX1M0__)
@@ -25,7 +29,6 @@ FIL fil;        /* File object */
 #elif defined(__IMXRT1062__)
   #define BUFFSIZE (8*1024) // size of buffer to be written
 #endif
-char *fnamePrefix = "A";
 
 uint32_t buffer[BUFFSIZE];
 UINT wr;
@@ -153,7 +156,7 @@ void loop()
      {  Serial.printf(" write FR_DISK_ERR at count # %d\n",count);
         // only option is to close file
         // force closing file
-        count=1000;
+        count=MXRC;
      }
      else if(rc) die("write",rc);
     //    
@@ -161,6 +164,6 @@ void loop()
      if(dt<dtwmin) dtwmin=dt;
      if(dt>dtwmax) dtwmax=dt;
      //
-     count %= 1000;
+     count %= MXRC;
   }    
 }
