@@ -15,8 +15,8 @@
 #define TEST_DRV 0 // 0: SPI; 1: SDIO; 2: USBHost
 
 //
-#define MXFN 1 // maximal number of files //was 100
-#define MXRC 2 // number of records in file // was 1000
+#define MXFN 10 // maximal number of files //was 100
+#define MXRC 1000 // number of records in file // was 1000
 char *fnamePrefix = "A";
 
 #define SDo 1   // Stock SD library
@@ -348,7 +348,6 @@ char *fnamePrefix = "A";
   };
 #endif
 
-class mFS_class mfs;
 
 #if defined(__MK20DX256__)
   #define BUFFSIZE (2*1024) // size of buffer to be written
@@ -359,6 +358,98 @@ class mFS_class mfs;
 #endif
 
 uint32_t buffer[BUFFSIZE];
+
+class Logger_class
+{
+  private:
+  class mFS_class mfs;
+
+  uint32_t count=0;
+  uint32_t ifn=0;
+  uint32_t isFileOpen=0;
+  char filename[80];
+  uint32_t t0=0;
+  uint32_t t1=0;
+  uint32_t dtwmin=1<<31, dtwmax=0;
+  uint32_t dto=1<<31, dtc=0;
+
+  public:
+    void init(void)
+    {
+      mfs.init();
+    }
+
+    void stop()
+    {
+      ifn = MXFN+1;
+    }
+    int16_t write(void *data, uint32_t ndat)
+    {
+      if(!count) // at the beginning of a file we have count==0;
+      {
+        // close file
+        if(isFileOpen)
+        { dtc = micros();
+          //close file
+          mfs.close();
+          //
+          isFileOpen=0;
+          t1=micros();
+          dtc = t1-dtc;
+          float MBs = (MXRC*ndat)/(1.0f*(t1-t0));
+          Serial.printf(" (%d - %f MB/s)\n (open: %d us; close: %d us; write: min,max: %d %d us)\n\r",
+                            t1-t0,MBs, dto, dtc, dtwmin,dtwmax);
+          dtwmin=1<<31; dtwmax=0;
+        }
+      }
+        
+      //
+      if(!isFileOpen)
+      {
+        // open new file
+        ifn++;
+        if(ifn>MXFN) // at end of test: exit and prepare for blinking
+        { mfs.exit();
+          return 0; 
+        } 
+    
+        dto=micros();
+        sprintf(filename,"%s_%05d.dat",fnamePrefix,ifn);
+        Serial.println(filename);
+        //
+        mfs.open(filename);
+        //
+        isFileOpen=1;
+        t0=micros();
+        dto=t0-dto;
+      }
+      
+      if(isFileOpen)
+      {
+         count++;
+         //write data to file 
+         if(!(count%10))Serial.printf(".");
+         if(!(count%640)) Serial.println(); Serial.flush();
+         //
+         uint32_t ta=micros();
+         if(!mfs.write((uint8_t *)buffer,BUFFSIZE*4))
+         {  Serial.printf(" write error at count # %d\n",count);
+            count=MXRC;
+         }
+         uint32_t tb=micros();
+         //    
+         uint32_t dt=tb-ta;
+         if(dt<dtwmin) dtwmin=dt;
+         if(dt>dtwmax) dtwmax=dt;
+         //
+         count %= MXRC;
+      }    
+      return 1;
+    }
+};
+
+class Logger_class mLogger;
+
 //=========================================================================
 void blink(uint16_t msec) { digitalWriteFast(13,!digitalReadFast(13)); delay(msec); }
 
@@ -372,81 +463,22 @@ void setup()
   Serial.println("Test logger_RawWrite");
   Serial.print("BUFFSIZE :");  Serial.println(BUFFSIZE);
   Serial.print("Dev Type :");  Serial.println(TEST_DRV);
-  mfs.init();
+  mLogger.init();
 }
 
 void loop()
 {
-  static uint32_t count=0;
-  static uint32_t ifn=0;
-  static uint32_t isFileOpen=0;
-  static char filename[80];
-  static uint32_t t0=0;
-  static uint32_t t1=0;
-  static uint32_t dtwmin=1<<31, dtwmax=0;
-  static uint32_t dto=1<<31, dtc=0;
+  static int doLogging=1;
+  if(!doLogging) { blink(500); return; }
 
-  if(ifn>MXFN) { blink(500); return; }
-  
-  if(!count)
-  {
-    // close file
-    if(isFileOpen)
-    { dtc = micros();
-      //close file
-      mfs.close();
-      //
-      isFileOpen=0;
-      t1=micros();
-      dtc = t1-dtc;
-      float MBs = (MXRC*BUFFSIZE*4.0f)/(1.0f*(t1-t0));
-      Serial.printf(" (%d - %f MB/s)\n (open: %d us; close: %d us; write: min,max: %d %d us)\n\r",
-                        t1-t0,MBs, dto, dtc, dtwmin,dtwmax);
-      dtwmin=1<<31; dtwmax=0;
-    }
-  }
-    
-  //
-  if(!isFileOpen)
-  {
-    // open new file
-    ifn++;
-    if(ifn>MXFN) 
-    { mfs.exit();
-      pinMode(13,OUTPUT); return; 
-    } // at end of test: prepare for blinking
+  while (Serial.available() > 0) 
+ { if ('q' == Serial.read() )  mLogger.stop();}
 
-    dto=micros();
-    sprintf(filename,"%s_%05d.dat",fnamePrefix,ifn);
-    Serial.println(filename);
-    //
-    mfs.open(filename);
-    //
-    isFileOpen=1;
-    t0=micros();
-    dto=t0-dto;
-  }
-  
-  if(isFileOpen)
-  {
-     // fill buffer
-     for(int ii=0;ii<BUFFSIZE;ii++) buffer[ii]='0'+(count%10);
-     count++;
-     //write data to file 
-     if(!(count%10))Serial.printf(".");
-     if(!(count%640)) Serial.println(); Serial.flush();
-     //
-     uint32_t ta=micros();
-     if(!mfs.write((uint8_t *)buffer,BUFFSIZE*4))
-     {  Serial.printf(" write error at count # %d\n",count);
-        count=MXRC;
-     }
-     uint32_t tb=micros();
-     //    
-     uint32_t dt=tb-ta;
-     if(dt<dtwmin) dtwmin=dt;
-     if(dt>dtwmax) dtwmax=dt;
-     //
-     count %= MXRC;
-  }    
+
+   // fill buffer
+   static uint32_t lc=0;
+   for(int ii=0;ii<BUFFSIZE;ii++) buffer[ii]='0'+(lc%10); lc++;
+   // call logger
+   doLogging=mLogger.write((void *) buffer, 4*BUFFSIZE);
+   if(!doLogging) pinMode(13,OUTPUT); 
 }

@@ -82,6 +82,10 @@ void loop()
 
   if(ifn>MXFN) { blink(500); return; }
   
+  // stop testing (finish actual file)
+  while (Serial.available() > 0) 
+  { if ('q' == Serial.read() ) ifn = MXFN+1; }
+  
   if(!count)
   {
     // close file
