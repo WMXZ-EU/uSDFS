@@ -93,7 +93,7 @@ void loop()
       isFileOpen=0;
       t1=micros();
       dtc = t1-dtc;
-      float MBs = (1000.0f*BUFFSIZE*4.0f)/(1.0f*(t1-t0));
+      float MBs = (MXRC*BUFFSIZE*4.0f)/(1.0f*(t1-t0));
       Serial.printf(" (%d - %f MB/s)\n (open: %d us; close: %d us; write: min,max: %d %d us)\n\r",
                         t1-t0,MBs, dto, dtc, dtwmin,dtwmax);
       dtwmin=1<<31; dtwmax=0;
