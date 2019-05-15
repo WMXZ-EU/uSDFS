@@ -51,6 +51,7 @@ void setup()
 
   while(!Serial);
   Serial.println("Test logger_RawWrite");
+  Serial.print("uSDFS_VER:"); Serial.println(uSDFS_VER);
   Serial.print("BUFFSIZE :");  Serial.println(BUFFSIZE);
   Serial.print("Dev Type :");  Serial.println(Dev);
   if((rc = f_mount (&fatfs, Dev, 1))) die("Mount",rc);      /* Mount/Unmount a logical drive */
