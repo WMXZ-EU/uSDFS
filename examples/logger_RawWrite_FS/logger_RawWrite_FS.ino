@@ -23,7 +23,7 @@ char *fnamePrefix = "A";
 #define SdFS 2  // Greimans SD library
 #define uSDFS 3 // CHaN's SD library (WMXZ's uSDFS)
 
-#define USE_FS SdFS
+#define USE_FS uSDFS
 
 #if TEST_DRV == 0
   #define SD_CS 10
