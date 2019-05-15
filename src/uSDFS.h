@@ -1,3 +1,7 @@
+#ifndef uSDFS_H
+#define uSDFS_H 
+#define uSDFS_VER "15_MAY_19_08_16"
+
 #include "ff.h"
 
 const char *STAT_ERROR_STRING[] = {
@@ -32,3 +36,5 @@ const char *FR_ERROR_STRING[] = {
 };
 
 const char *fileSystem[] = {"No FS", "FS_FAT12","FS_FAT!6","FS_FAT32","FS_EXFAT"};
+
+#endif
