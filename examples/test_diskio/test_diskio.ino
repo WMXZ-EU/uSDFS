@@ -114,6 +114,8 @@ void setup() {
   // put your setup code here, to run once:
 
   while(!Serial);
+  Serial.println("Test diskio");
+  Serial.print("uSDFS_VER:"); Serial.println(uSDFS_VER);
   
   BYTE pdrv = TEST_DRV;
   
