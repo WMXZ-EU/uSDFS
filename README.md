@@ -78,8 +78,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 * Version 1.1.0
 	* upgraded to ELM-CHaN's ff13c
 	* refactored library structure
-	* added SPI interface
 	* added Teensy 4 low-level interface
 	* added MSC (USB disk) interface
 		* uses UHSHost_t36 (Teensy build-in library)
-		* needs MSC library (https://forum.pjrc.com/threads/55821-USBHost_t36-USB-Mass-Storage-Driver-Experiments) (no need to copy files over from MSC library to uSDFS library)
+		* needs MSC library (https://forum.pjrc.com/threads/55821-USBHost_t36-USB-Mass-Storage-Driver-Experiments) 
