@@ -454,6 +454,7 @@ class Logger_class
 class Logger_class mLogger;
 
 /********** RTC ***************/
+#if defined(__IMXRT1062__)
 void rtc_init() 
 { CCM_CCGR2 |= CCM_CCGR2_IOMUXC_SNVS(CCM_CCGR_ON);
   SNVS_LPGPR = SNVS_DEFAULT_PGD_VALUE;
@@ -491,7 +492,12 @@ uint32_t rtc_secs() {
 
   return seconds;
 }
-
+#else
+	#include "core_pins.h"
+	void rtc_init() {}
+	uint32_t rtc_secs() {return rtc_get();}
+	void rtc_set_time(uint32_t secs) {  rtc_set(secs);}
+#endif
  //needs definition in arduino build (compare with T3)
  //teensy4b2.build.flags.ld=-Wl,--gc-sections,--relax,--defsym=__rtc_localtime={extra.time.local} "-T{build.core.path}/imxrt1062.ld"
 extern void *__rtc_localtime;
