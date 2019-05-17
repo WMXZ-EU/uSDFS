@@ -28,7 +28,7 @@
 #include "sd_msc.h"
 #include "sd_config.h"
 
-#if defined __MK66FX1M0__ || defined __MK64FX512__ || defined __IMXRT1062__ 
+#if defined __MK66FX1M0__ || defined __MK64FX512__ || defined __IMXRT1052__ || defined __IMXRT1062__ 
 	#define HAVE_MSC USE_MSC	//USE_MSC (0,1) is defined in sd_config
 #else
 	#define HAVE_MSC 0
