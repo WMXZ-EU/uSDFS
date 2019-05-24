@@ -57,12 +57,12 @@
 	}
 
 	int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) 
-	{	WaitDriveReady();
+	{	//WaitDriveReady();
 		return readSectors((BYTE *)buff, sector, count);
 	}
 
 	int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count) 
-	{	WaitDriveReady();
+	{	//WaitDriveReady();
 		return writeSectors((BYTE *)buff, sector, count);
 	}
 
