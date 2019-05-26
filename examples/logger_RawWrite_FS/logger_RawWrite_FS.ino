@@ -12,7 +12,7 @@
  * WMXZ uSDFS:           FAT32, exFAT;  SPI(T3,T4), SDIO(I3,T4), USBHost(T3,T4)
  * Caveat: functionality only partial verified
  */
-#define TEST_DRV 0 // 0: SPI; 1: SDIO; 2: USBHost
+#define TEST_DRV 2 // 0: SPI; 1: SDIO; 2: USBHost
 
 //
 #define MXFN 10 // maximal number of files //was 100
@@ -250,6 +250,9 @@ char *fnamePrefix = "A";
 
 #elif  USE_FS == uSDFS
   #include "uSDFS.h"
+  #include <USBHost_t36.h>
+  USBHub hub1(nullptr);
+  USBHub hub2(nullptr);
 
   #if TEST_DRV == 0
     const char *Dev = "0:/";  // SPI
@@ -257,7 +260,11 @@ char *fnamePrefix = "A";
     const char *Dev = "1:/";  // SDHC
   #elif TEST_DRV == 2
     const char *Dev = "2:/";  // USB
+  #elif TEST_DRV == 3
+    const char *Dev = "3:/";  // USB 2nd partition
   #endif
+  PARTITION VolToPart[] = {{0,0}, {1,0}, {2,0}, {2,2}};  /* Volume - Partition resolution table */
+
   
   class mFS_class
   {
@@ -360,6 +367,9 @@ char *fnamePrefix = "A";
   #define BUFFSIZE (8*1024) // size of buffer to be written
 #endif
 
+// Temp Hack to print out stats from MSC library...
+extern void MSC_PrintCallStats();
+
 uint32_t buffer[BUFFSIZE];
 
 class Logger_class
@@ -402,6 +412,7 @@ class Logger_class
           float MBs = (MXRC*ndat)/(1.0f*(t1-t0));
           Serial.printf(" (%d - %f MB/s)\n (open: %d us; close: %d us; write: min,max: %d %d us)\n\r",
                             t1-t0,MBs, dto, dtc, dtwmin,dtwmax);
+          MSC_PrintCallStats();
           dtwmin=1<<31; dtwmax=0;
         }
       }
