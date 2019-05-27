@@ -82,3 +82,10 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	* added MSC (USB disk) interface
 		* uses UHSHost_t36 (Teensy build-in library)
 		* needs MSC library (https://forum.pjrc.com/threads/55821-USBHost_t36-USB-Mass-Storage-Driver-Experiments) 
+
+### - 27-may-2019
+* Version 1.1.1
+	* added interface to GPT partitions (thanks to KurtE)
+
+
+
