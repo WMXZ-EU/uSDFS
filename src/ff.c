@@ -21,7 +21,7 @@
 
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of device I/O functions */
-
+#include <stdio.h>
 
 /*--------------------------------------------------------------------------
 
@@ -3205,7 +3205,71 @@ static BYTE check_fs (	/* 0:FAT, 1:exFAT, 2:Valid BS but not FAT, 3:Not a BS, 4:
 }
 
 
+/*-----------------------------------------------------------------------*/
+/* See if disk is using GPT instead of MBR                               */
+/*-----------------------------------------------------------------------*/
+struct guid_partition {
+  uint8_t type_guid[16];  // Type of partition
+  uint8_t id_guid[16];    // unique ID for partition
+  uint8_t starting_lba[8];
+  uint8_t ending_lba[8];
+  uint8_t attribute_bits[8];
+  uint8_t name[72];
+} __attribute__((packed));
+typedef struct guid_partition guid_partition_t;
 
+  const static uint8_t basicDataPartition_guid[] = {0xa2, 0xa0, 0xd0, 0xeb, 0xe5, 0xb9, 0x33, 0x44,
+                                                    0x87, 0xc0, 0x68, 0xb6, 0xb7, 0x26, 0x99, 0xc7
+                                                   };
+
+static uint8_t check_GPT_disk (
+	FATFS *fs,
+	DWORD *br 			/* we will fill in the array our self */
+) 
+{
+	int i;
+	int br_index;
+
+	BYTE *pt = fs->win + MBR_Table;
+	if (pt[PTE_System] != 0xEE) return 0;
+
+//	char tmp_buff[80];
+
+//	sprintf(tmp_buff, "## check_GPT_disk - Maybe\n");
+//	usb_serial_write(tmp_buff, strlen(tmp_buff));
+
+	// Maybe should read in Sector 1 to validate GPT header.
+
+	if (move_window(fs, 1) != FR_OK) return 0;	/* Load GPT Quid Header */
+//	sprintf(tmp_buff, "## After read sector 1\n");
+//	usb_serial_write(tmp_buff, strlen(tmp_buff));
+	if (mem_cmp(fs->win, "EFI PART", 8)) return 0;		/* Not a valid header  */
+
+	// Again hard coded ...
+	if (move_window(fs, 2) != FR_OK) return 0;	/* Load GPT Quid Header */
+//	sprintf(tmp_buff, "## Looks like valid GPT table lets get indexes...\n");
+//	usb_serial_write(tmp_buff, strlen(tmp_buff));
+
+	br_index = 0;
+	for (i=0; i < 4; i++) {
+		guid_partition_t *gpt = (guid_partition_t*)((uint8_t*)fs->win + (i * sizeof(guid_partition_t)));
+		// A type guid of all 0's is the end... 
+      	if (!gpt->type_guid[0] && !gpt->type_guid[1] && !gpt->type_guid[2] && !gpt->type_guid[3]) break;
+
+      	if (mem_cmp(gpt->type_guid, basicDataPartition_guid, sizeof(basicDataPartition_guid)) == 0)  {
+      		if (gpt->ending_lba[4] || gpt->ending_lba[5] || gpt->ending_lba[6] || gpt->ending_lba[7]) break; // too big of number...
+      		// BUGBUGBUG - should check high values as well... 
+      		br[br_index] = gpt->starting_lba[0] | ((uint32_t)gpt->starting_lba[1] << 8) | ((uint32_t)gpt->starting_lba[2] << 16) | ((uint32_t)gpt->starting_lba[3] << 24);
+//			sprintf(tmp_buff, "## Found Basic User Partition: %d (%d) starting at %u\n", i, br_index, br[br_index]);
+//			usb_serial_write(tmp_buff, strlen(tmp_buff));
+			br_index++;
+      	}
+	}
+	while (br_index < 4) {
+      	br[br_index++] = 0;
+	}
+	return 1;
+}
 
 /*-----------------------------------------------------------------------*/
 /* Determine logical drive number and mount the volume if needed         */
@@ -3270,10 +3334,15 @@ static FRESULT find_volume (	/* FR_OK(0): successful, !=0: an error occurred */
 	/* Find an FAT partition on the drive. Supports only generic partitioning rules, FDISK (MBR) and SFD (w/o partition). */
 	bsect = 0;
 	fmt = check_fs(fs, bsect);			/* Load sector 0 and check if it is an FAT-VBR as SFD */
+
 	if (fmt == 2 || (fmt < 2 && LD2PT(vol) != 0)) {	/* Not an FAT-VBR or forced partition number */
-		for (i = 0; i < 4; i++) {		/* Get partition offset */
-			pt = fs->win + (MBR_Table + i * SZ_PTE);
-			br[i] = pt[PTE_System] ? ld_dword(pt + PTE_StLba) : 0;
+		// See if this looks like a GPT type disk.
+		if (!check_GPT_disk(fs, br)) {
+
+			for (i = 0; i < 4; i++) {		/* Get partition offset */
+				pt = fs->win + (MBR_Table + i * SZ_PTE);
+				br[i] = pt[PTE_System] ? ld_dword(pt + PTE_StLba) : 0;
+			}
 		}
 		i = LD2PT(vol);					/* Partition number: 0:auto, 1-4:forced */
 		if (i != 0) i--;
@@ -3510,6 +3579,11 @@ FRESULT f_mount (
 
 	/* Get logical drive number */
 	vol = get_ldnumber(&rp);
+
+//	char tmp_buff[80];
+//	sprintf(tmp_buff, "## f_mount path=%s vol=%d\n", path, vol);
+//	usb_serial_write(tmp_buff, strlen(tmp_buff));
+
 	if (vol < 0) return FR_INVALID_DRIVE;
 	cfs = FatFs[vol];					/* Pointer to fs object */
 
