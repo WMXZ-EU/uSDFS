@@ -4,7 +4,7 @@
 	"platforms": "Teensy 3.2/5/6 - T4",
 	"keywords": "FileSystem, exFAT, FAT32, SDIO, SPI, MBR, GPT",
 	"description": "WMXZ uSDFS Library", 
-	"version": "1.1.1",
+	"version": "1.1.1a",
 	"authors":
 	{	"name": "Walter Zimmer",
 		"maintainer": true

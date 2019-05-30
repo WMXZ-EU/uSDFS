@@ -1,6 +1,6 @@
 #ifndef uSDFS_H
 #define uSDFS_H 
-#define uSDFS_VER "15_MAY_19_08_16"
+#define uSDFS_VER "30_MAY_19_15_00"
 
 #include "ff.h"
 
@@ -35,6 +35,6 @@ const char *FR_ERROR_STRING[] = {
 	"FR_INVALID_PARAMETER"	/* (19) Given parameter is invalid */
 };
 
-const char *fileSystem[] = {"No FS", "FS_FAT12","FS_FAT!6","FS_FAT32","FS_EXFAT"};
+const char *fileSystem[] = {"No FS", "FS_FAT12","FS_FAT16","FS_FAT32","FS_EXFAT"};
 
 #endif
