@@ -288,7 +288,7 @@ static void setSdclk(uint32_t kHzMax) {
   while ((f_pll / (sdclkfs * dvs) > maxSdclk) && (dvs < DVS_LIMIT)) {
     dvs++;
   }
-  uint32_t m_sdClkKhz = f_pll / (1000 * sdclkfs * dvs);
+  // unused // uint32_t m_sdClkKhz = f_pll / (1000 * sdclkfs * dvs);
 
   sdclkfs >>= 1;
   dvs--;
@@ -545,13 +545,13 @@ uint8_t sd_CardInit(void)
 #define SDHC_CMD17_XFERTYP (SDHC_XFERTYP_CMDINX(SDHC_CMD17) | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) \
                             | SDHC_XFERTYP_DPSEL | SDHC_XFERTYP_DMAEN | SDHC_XFERTYP_DTDSEL) 
 #define SDHC_CMD18_XFERTYP (SDHC_XFERTYP_CMDINX(SDHC_CMD18) | SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) \
-                            | SDHC_XFERTYP_DPSEL | SDHC_XFERTYP_DMAEN | SDHC_XFERTYP_DTDSEL \ 
+                            | SDHC_XFERTYP_DPSEL | SDHC_XFERTYP_DMAEN | SDHC_XFERTYP_DTDSEL \
                             | SDHC_XFERTYP_AC12EN| SDHC_XFERTYP_BCEN | SDHC_XFERTYP_MSBSEL )
 //
 int sd_CardReadBlocks(void * buff, uint32_t sector, uint32_t count)
 {
   int result=0;
-  uint32_t* pData = (uint32_t*)buff;
+  // unused // uint32_t* pData = (uint32_t*)buff;
 
   
   // Convert LBA to BYTE address if needed
@@ -608,7 +608,7 @@ int sd_CardReadBlocks(void * buff, uint32_t sector, uint32_t count)
   SDHC_IRQSTAT &= (SDHC_IRQSTAT_CC | SDHC_IRQSTAT_TC);
 
 	// Auto CMD12 is enabled for DMA so call it if DMA error
-	if((SDHC_DSADDR < buff+(count*512)) && (count>1))
+	if((SDHC_DSADDR < (uint32_t)(buff+(count*512))) && (count>1))
 		result=sd_CMD12_StopTransferWaitForBusy();
 
   return result;
@@ -629,13 +629,13 @@ int sd_CardReadBlocks(void * buff, uint32_t sector, uint32_t count)
                      //| SDHC_XFERTYP_AC12EN | SDHC_XFERTYP_BCEN | SDHC_XFERTYP_MSBSEL 
 
 #define SDHC_CMD25_XFERTYP (SDHC_XFERTYP_CMDINX(SDHC_CMD25) |SDHC_XFERTYP_RSPTYP(SDHC_XFERTYP_RSPTYP_48) \
-                            | SDHC_XFERTYP_DPSEL | SDHC_XFERTYP_DMAEN \ 
+                            | SDHC_XFERTYP_DPSEL | SDHC_XFERTYP_DMAEN \
                             | SDHC_XFERTYP_AC12EN| SDHC_XFERTYP_BCEN | SDHC_XFERTYP_MSBSEL )
 //
 int sd_CardWriteBlocks(const void * buff, uint32_t sector, uint32_t count)
 {
   int result=0;
-  const uint32_t *pData = (const uint32_t *)buff;
+  // unused // const uint32_t *pData = (const uint32_t *)buff;
 
   // Convert LBA to uint8_t address if needed
   if (!sdCardDesc.highCapacity) sector *= 512;
