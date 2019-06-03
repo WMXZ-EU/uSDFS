@@ -1,8 +1,18 @@
 #ifndef uSDFS_H
 #define uSDFS_H 
-#define uSDFS_VER "30_MAY_19_15_00"
+#define uSDFS_VER "01_Jun_19_08_00"
 
 #include "ff.h"
+
+#if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
+	PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
+	                         {DEV_SDHC,0}, 
+							 {DEV_USB, 0}, 
+							 {DEV_USB, 1}, 
+							 {DEV_USB, 2}
+							 }; /* Volume - Partition resolution table */
+#endif
+
 
 const char *STAT_ERROR_STRING[] = {
 	"STA_OK", //		0x00	/* No error */
@@ -36,5 +46,6 @@ const char *FR_ERROR_STRING[] = {
 };
 
 const char *fileSystem[] = {"No FS", "FS_FAT12","FS_FAT16","FS_FAT32","FS_EXFAT"};
+
 
 #endif

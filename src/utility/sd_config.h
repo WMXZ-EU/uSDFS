@@ -37,15 +37,6 @@ extern "C" {
 #define DEV_SDHC  1 /* Example: Map SDHC card to physical drive 1 */
 #define DEV_MSC   2 /* Example: Map MSC card (USB disk) to physical drive 2 */
 
-#if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
-	PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
-	                         {DEV_SDHC,0}, 
-							 {DEV_USB, 0}, 
-							 {DEV_USB, 1}, 
-							 {DEV_USB, 2}
-							 }; /* Volume - Partition resolution table */
-#endif
-
 // SPI 
 #define CS_PIN 10
 
@@ -65,11 +56,10 @@ extern "C" {
 
 #define SDHC_DO4BITS                        1	// use 4 bit bus
 //#define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_SWPOLL
-#define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_DMA // not implemented yet
+#define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_DMA 
 
 //MSC
 #define USE_MSC 1	// will be used in sd_msc.cpp
-
 
 #ifdef __cplusplus
 }
