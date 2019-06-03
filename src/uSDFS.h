@@ -4,15 +4,17 @@
 
 #include "ff.h"
 
-#if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
-	PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
-	                         {DEV_SDHC,0}, 
-							 {DEV_USB, 0}, 
-							 {DEV_USB, 1}, 
-							 {DEV_USB, 2}
-							 }; /* Volume - Partition resolution table */
+#ifndef MY_VOL_TO_PART
+	#define MY_VOL_TO_PART
+	#if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
+		PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
+								 {DEV_SDHC,0}, 
+								 {DEV_USB, 0}, 
+								 {DEV_USB, 1}, 
+								 {DEV_USB, 2}
+								 }; /* Volume - Partition resolution table */
+	#endif
 #endif
-
 
 const char *STAT_ERROR_STRING[] = {
 	"STA_OK", //		0x00	/* No error */
