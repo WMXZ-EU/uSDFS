@@ -229,18 +229,20 @@ uint16_t sd_init(uint16_t cs_pin)
   for (ii = 0; ii < 10; ii++) spi_send(0XFF);
 
   if(!sd_connect())
-  {  uint32_t errorcode=sd_getError();
+  {  // uint32_t errorcode=sd_getError();
 //     printDebug("connect:", errorcode);
     return false;
   }
   else
-  {  int32_t sd_size,sd_type,bb[4]; 
+  {  
+#ifdef DEBUG_THIS
+     int32_t sd_size,sd_type;bb[4]; 
      bb[0]=bb[1]=bb[2]=bb[3]=0;
      sd_type=sd_getType();
-//     printDebug("Card Type:",sd_type);
-     //
+     printDebug("Card Type:",sd_type);
      sd_size=sd_cardSize();
-//     printDebug("Card Size:",sd_size);
+     printDebug("Card Size:",sd_size);
+#endif
   }
   
   #define MEG (1000*1000)
@@ -292,7 +294,7 @@ uint8_t sd_cardCommand(uint8_t cmd, uint32_t arg)
   sd_chipSelect(LOW);
 
   // wait if busy
- uint16_t ret=sd_waitNotBusy(SD_WRITE_TIMEOUT);
+ // unused // uint16_t ret=sd_waitNotBusy(SD_WRITE_TIMEOUT);
 // form message
   d[0]=cmd | 0x40;
   for(kk=1;kk<5;kk++) d[kk]=pa[4-kk];
@@ -398,7 +400,7 @@ int sd_connect()
   uint16_t t0,t1;
   t0  = (uint16_t)millis();
   uint32_t arg;
-  uint8_t ret;
+  // uint8_t ret;
   // command to go idle in SPI mode
   sd_chipSelect(LOW);
 
@@ -738,7 +740,7 @@ uint16_t sd_writeBlock(uint32_t blockNumber, const uint8_t* src)
  */
 uint16_t sd_writeData2(const uint8_t* src) 
 {
-static long cnt=0;
+// unused // static long cnt=0;
   sd_chipSelect(LOW);
   if (!sd_waitNotBusy(SD_WRITE_TIMEOUT)) goto fail;
   if (!sd_writeData(WRITE_MULTIPLE_TOKEN, src)) goto fail;
