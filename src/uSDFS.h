@@ -6,6 +6,7 @@
 
 #ifndef MY_VOL_TO_PART
 	#define MY_VOL_TO_PART
+	#include "sd_config.h"
 	#if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
 		PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
 								 {DEV_SDHC,0}, 
