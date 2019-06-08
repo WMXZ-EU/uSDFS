@@ -3,7 +3,8 @@
 //
 // use following lines for early definitions of multiple partition configuration in uSDFS.h
 #define MY_VOL_TO_PART
-#include "sd_config.h"
+#include "uSDFS.h"
+
 #if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
 	PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
 							 {DEV_SDHC,0}, 
@@ -13,12 +14,12 @@
 							 }; /* Volume - Partition resolution table */
 #endif
 // end of early definition
-#include "uSDFS.h"
 
-#define TEST_DRV 2
+
+#define TEST_DRV 1
 //
-#define MXFN 1 // maximal number of files //was 100
-#define MXRC 2 // number of records in file // was 1000
+#define MXFN 10 // maximal number of files //was 100
+#define MXRC 1000 // number of records in file // was 1000
 char *fnamePrefix = "A";
 
 //
@@ -53,6 +54,39 @@ void die(const char *text, FRESULT rc)
 void blink(uint16_t msec)
 {
   digitalWriteFast(13,!digitalReadFast(13)); delay(msec);
+}
+
+#include "time.h"
+extern "C" struct tm seconds2tm(uint32_t tt);
+extern "C" struct tm decode_fattime (uint16_t td, uint16_t tt);
+
+
+void listDir(const char *dirName)
+{
+	FRESULT res;
+	DIR dir;
+	FILINFO fno;
+
+	res = f_opendir(&dir, dirName);                       /* Open the directory */
+	Serial.printf("openDir %s\n",FR_ERROR_STRING[res]);
+	if (res == FR_OK) 
+	{
+		for (;;) 
+		{
+			res = f_readdir(&dir, &fno);                   /* Read a directory item */
+			if (res != FR_OK || fno.fname[0] == 0) break;  /* Break on error or end of dir */
+			if(!strncmp(fno.fname,fnamePrefix,strlen(fnamePrefix)))
+			{
+			  Serial.printf("%s ", fno.fname);                /* Display the object name */
+			  Serial.printf("%d ", fno.fsize);                /* Display the object size */
+			  struct tm tx = decode_fattime (fno.fdate, fno.ftime);
+			  Serial.printf("%4d-%02d-%02d %02d:%02d:%02d\n",
+							tx.tm_year,tx.tm_mon,tx.tm_mday, 
+							tx.tm_hour,tx.tm_min,tx.tm_sec);
+			}
+		}
+    }
+    f_closedir(&dir);
 }
 
 void setup()
@@ -122,7 +156,8 @@ void loop()
     // open new file
     ifn++;
     if(ifn>MXFN) 
-    { rc = f_unmount(Dev);
+    { listDir(Dev);
+	  rc = f_unmount(Dev);
       Serial.print("unmount "); Serial.println(FR_ERROR_STRING[rc]);
       pinMode(13,OUTPUT); return; 
     } // at end of test: prepare for blinking

@@ -26,16 +26,13 @@
 #ifndef _SD_CONIG_H
 #define _SD_CONIG_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "ff.h"
 
 /* Definitions of physical drive number for each drive */
 #define DEV_SPI   0 /* Example: Map SPI card to physical drive 0 */
 #define DEV_SDHC  1 /* Example: Map SDHC card to physical drive 1 */
 #define DEV_MSC   2 /* Example: Map MSC card (USB disk) to physical drive 2 */
+#define DEV_USB   2 /* Example: Map MSC card (USB disk) to physical drive 2 */
 
 // SPI 
 #define CS_PIN 10
@@ -61,8 +58,5 @@ extern "C" {
 //MSC
 #define USE_MSC 1	// will be used in sd_msc.cpp
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif
