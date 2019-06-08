@@ -20,7 +20,7 @@
 //
 #define MXFN 10 // maximal number of files //was 100
 #define MXRC 1000 // number of records in file // was 1000
-char *fnamePrefix = "A";
+const char *fnamePrefix = "A";
 
 //
 #if TEST_DRV == 0
@@ -118,7 +118,7 @@ void setup()
 void loop()
 {
 	static uint32_t count=0;
-	static uint32_t ifn=0;
+	static int32_t ifn=0;
 	static uint32_t isFileOpen=0;
 	static char filename[80];
 	static uint32_t t0=0;
@@ -138,7 +138,7 @@ void loop()
     if(isFileOpen)
     { dtc = micros();
       //close file
-      if (rc = f_close(&fil)) die("close", rc);
+      if ((rc = f_close(&fil))) die("close", rc);
       //
       isFileOpen=0;
       t1=micros();
@@ -163,14 +163,14 @@ void loop()
     } // at end of test: prepare for blinking
 
     dto=micros();
-    sprintf(filename,"%s_%05d.dat",fnamePrefix,ifn);
+    sprintf(filename,"%s_%05d.dat",fnamePrefix,(int)ifn);
     Serial.println(filename);
     //
     // check status of file
     rc = f_stat(filename,0);
     Serial.printf("stat %s %x\n",FR_ERROR_STRING[rc],fil.obj.sclust);
     
-    rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS);
+    rc = f_open(&fil, filename, (FA_WRITE | FA_CREATE_ALWAYS));
     Serial.printf(" opened %s %x\n\r",FR_ERROR_STRING[rc],fil.obj.sclust);
     // check if file is Good
     if(rc == FR_INT_ERR)
@@ -184,7 +184,7 @@ void loop()
         else
           die("close", rc);
       // retry open file
-      if(rc = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS)) die("open", rc);
+      if(rc = f_open(&fil, filename, (FA_WRITE | FA_CREATE_ALWAYS))) die("open", rc);
     }
     //
     isFileOpen=1;

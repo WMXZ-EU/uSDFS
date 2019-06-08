@@ -22,7 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include "core_pins.h"  // include calls to kinetis.h or imxrt.h
+#include "core_pins.h"  // includes calls to kinetis.h or imxrt.h
 
 #include "../diskio.h"
 #include "sd_msc.h"
@@ -40,7 +40,8 @@
 	#include "usb_serial.h"
 	#include "msc.h"
 	#include "MassStorage.h"
-	
+
+// needs msc from  https://github.com/wwatson4506/MSC	
 	USBHost myusb;
 
 	int MSC_disk_status() 
@@ -57,13 +58,11 @@
 	}
 
 	int MSC_disk_read(BYTE *buff, DWORD sector, UINT count) 
-	{	//WaitDriveReady();
-		return readSectors((BYTE *)buff, sector, count);
+	{	return readSectors((BYTE *)buff, sector, count);
 	}
 
 	int MSC_disk_write(const BYTE *buff, DWORD sector, UINT count) 
-	{	//WaitDriveReady();
-		return writeSectors((BYTE *)buff, sector, count);
+	{	return writeSectors((BYTE *)buff, sector, count);
 	}
 
 	int MSC_ioctl(BYTE cmd, BYTE *buff) {return 0;}
