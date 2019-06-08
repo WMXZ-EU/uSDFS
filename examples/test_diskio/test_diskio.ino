@@ -1,5 +1,21 @@
+//Copyright 2019 by Walter Zimmer
+// Version 08-jun-19
+//// use following lines for early definitions of multiple partition configuration in uSDFS.h
+#define MY_VOL_TO_PART
+#include "sd_config.h"
+#if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
+	PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
+							 {DEV_SDHC,0}, 
+							 {DEV_USB, 0}, 
+							 {DEV_USB, 1}, 
+							 {DEV_USB, 2}
+							 }; /* Volume - Partition resolution table */
+#endif
+// end of early definition
+
 #include "uSDFS.h"
 #include "diskio.h"
+
 /*
 * for APL see http://elm-chan.org/fsw/ff/00index_e.html
 */
@@ -39,6 +55,24 @@ struct masterBootRecord {
 } __attribute__((packed));
 typedef struct masterBootRecord mbr_t;
 
+struct guid {
+  uint8_t signature[8];  //8 bytes
+  uint8_t revision[4];  //pos 3
+  uint8_t hdr_sz[4];    //pos 1
+  uint32_t crc32;     //single 32bit val
+  uint8_t reserved[4];
+  uint8_t prim_lba[8];  //pos 1 always = 1
+  uint8_t back_lba[8];  //Address of backup LBA
+  uint8_t first_lba[8];
+  uint8_t last_lba[8];
+  uint8_t disk_guid[16];
+  uint8_t part_entry_lba[8];
+  uint8_t number_parts[4];
+  uint8_t sz_parts[4];
+  uint32_t part_entry_crc32;
+  uint8_t temp1[420];
+}__attribute__((packed));
+typedef struct guid guid_t;
 
 struct fat32_boot {
   uint8_t jump[3];
@@ -124,7 +158,10 @@ void setup() {
 
   BYTE* buff = (BYTE *) buffer;
   DWORD sector = 0;
+  DWORD sector1 = 0;
   UINT count = 1;
+  UINT count1 = 1;
+  
   DRESULT res = disk_read (pdrv, buff, sector, count);
   Serial.print("Disk read Result: "); Serial.println(FR_ERROR_STRING[res]);
   for(int ii=0;ii<512; ii++)
@@ -153,17 +190,80 @@ void setup() {
   fat32_boot_t * ptr1=(fat32_boot_t *) buffer;
   exfat_boot_t * ptr2=(exfat_boot_t *) buffer;
 
-  if(strncmp(ptr1->fileSystemType,"FAT32",5)==0)
+  
+  if(mbr->part[0].type == 0xee)
   {
-    Serial.println("FAT32");
-    Serial.print("bytes per sector :");Serial.println(ptr1->bytesPerSector);
-    Serial.print("sectors per cluster :");Serial.println(ptr1->sectorsPerCluster);
-  }
-  else if(strncmp(ptr2->oem_name,"EXFAT",5)==0)
+    // read now first partition sector
+    Serial.println("\nFirst partition Sector");
+    sector = mbr->part[0].firstSector;
+    sector1 = mbr->part[1].firstSector;
+    count = 1;
+    res = disk_read (pdrv, buff, sector, count);
+    Serial.print("Disk read Result: "); Serial.println(FR_ERROR_STRING[res]);
+    for(int ii=0;ii<512; ii++)
+    if((ii+1)%16) Serial.printf("%02x ",buff[ii]); else Serial.printf("%02x\n",buff[ii]);
+  
+    guid_t * ptr1=(guid_t *) buffer;
+
+    Serial.println("====  GPT GUID HEADER ====");
+    Serial.print("Signature: ");
+    for(uint8_t ii = 0; ii<8; ii++){ 
+      Serial.print(ptr1->signature[ii], HEX);
+      Serial.print(", ");
+    }
+    Serial.println();
+  
+    Serial.print("Number of Partitions: ");
+    Serial.println(ptr1->number_parts[0], HEX);
+  } 
+  else 
   {
-    Serial.println("EXFAT");
-    Serial.print("bytes per sector :");Serial.println(1<<ptr2->sector_bits);
-    Serial.print("sectors per cluster :");Serial.println(1<<ptr2->spc_bits);
+    // read now first partition sector
+    Serial.println("\nFirst partition Sector");
+    sector = mbr->part[0].firstSector;
+    sector1 = mbr->part[1].firstSector;
+    count = 1;
+    res = disk_read (pdrv, buff, sector, count);
+    Serial.print("Disk read Result: "); Serial.println(FR_ERROR_STRING[res]);
+    for(int ii=0;ii<512; ii++)
+    if((ii+1)%16) Serial.printf("%02x ",buff[ii]); else Serial.printf("%02x\n",buff[ii]);
+  
+    fat32_boot_t * ptr1=(fat32_boot_t *) buffer;
+    exfat_boot_t * ptr2=(exfat_boot_t *) buffer;
+  
+    if(strncmp(ptr1->fileSystemType,"FAT32",5)==0)
+    {
+      Serial.println("FAT32");
+      Serial.print("bytes per sector :");Serial.println(ptr1->bytesPerSector);
+      Serial.print("sectors per cluster :");Serial.println(ptr1->sectorsPerCluster);
+    }
+    else if(strncmp(ptr2->oem_name,"EXFAT",5)==0)
+    {
+      Serial.println("EXFAT");
+      Serial.print("bytes per sector :");Serial.println(1<<ptr2->sector_bits);
+      Serial.print("sectors per cluster :");Serial.println(1<<ptr2->spc_bits);
+    }
+  
+    // read now Second partition sector
+    Serial.println("\nSecond partition Sector");
+    count = 1;
+    res = disk_read (pdrv, buff, sector1, count);
+    Serial.print("Disk read Result: "); Serial.println(FR_ERROR_STRING[res]);
+    for(int ii=0;ii<512; ii++)
+    if((ii+1)%16) Serial.printf("%02x ",buff[ii]); else Serial.printf("%02x\n",buff[ii]);
+  
+    if(strncmp(ptr1->fileSystemType,"FAT32",5)==0)
+    {
+      Serial.println("FAT32");
+      Serial.print("bytes per sector :");Serial.println(ptr1->bytesPerSector);
+      Serial.print("sectors per cluster :");Serial.println(ptr1->sectorsPerCluster);
+    }
+    else if(strncmp(ptr2->oem_name,"EXFAT",5)==0)
+    {
+      Serial.println("EXFAT");
+      Serial.print("bytes per sector :");Serial.println(1<<ptr2->sector_bits);
+      Serial.print("sectors per cluster :");Serial.println(1<<ptr2->spc_bits);
+    }
   }
   pinMode(13,OUTPUT);
 }

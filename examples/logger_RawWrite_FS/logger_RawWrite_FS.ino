@@ -1,5 +1,5 @@
 //Copyright 2019 by Walter Zimmer
-// Version 15-may-19
+// Version 08-jun-19
 //
 /*
  * Logger test program
@@ -249,6 +249,21 @@ char *fnamePrefix = "A";
   };
 
 #elif  USE_FS == uSDFS
+	// use following lines for early definitions of multiple partition configuration in uSDFS.h
+	#define MY_VOL_TO_PART
+	#include "sd_config.h"
+	#if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
+		PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
+								 {DEV_SDHC,0}, 
+								 {DEV_USB, 0}, 
+								 {DEV_USB, 1}, 
+								 {DEV_USB, 2}
+								 }; /* Volume - Partition resolution table */
+	#endif
+	// end of early definition
+
+
+
   #include "uSDFS.h"
   #include <USBHost_t36.h>
   USBHub hub1(nullptr);
@@ -263,7 +278,7 @@ char *fnamePrefix = "A";
   #elif TEST_DRV == 3
     const char *Dev = "3:/";  // USB 2nd partition
   #endif
-  PARTITION VolToPart[] = {{0,0}, {1,0}, {2,0}, {2,2}};  /* Volume - Partition resolution table */
+//  PARTITION VolToPart[] = {{0,0}, {1,0}, {2,0}, {2,2}};  /* Volume - Partition resolution table */
 
   
   class mFS_class

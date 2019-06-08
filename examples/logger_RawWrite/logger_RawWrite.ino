@@ -1,6 +1,18 @@
 //Copyright 2019 by Walter Zimmer
-// Version 07-may-19
+// Version 08-jun-19
 //
+// use following lines for early definitions of multiple partition configuration in uSDFS.h
+#define MY_VOL_TO_PART
+#include "sd_config.h"
+#if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
+	PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
+							 {DEV_SDHC,0}, 
+							 {DEV_USB, 0}, 
+							 {DEV_USB, 1}, 
+							 {DEV_USB, 2}
+							 }; /* Volume - Partition resolution table */
+#endif
+// end of early definition
 #include "uSDFS.h"
 
 #define TEST_DRV 2
