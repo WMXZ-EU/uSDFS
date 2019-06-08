@@ -17,7 +17,7 @@
 //
 #define MXFN 10 // maximal number of files //was 100
 #define MXRC 1000 // number of records in file // was 1000
-char *fnamePrefix = "A";
+const char *fnamePrefix = "A";
 
 #define SDo 1   // Stock SD library
 #define SdFS 2  // Greimans SD library
@@ -251,7 +251,8 @@ char *fnamePrefix = "A";
 #elif  USE_FS == uSDFS
 	// use following lines for early definitions of multiple partition configuration in uSDFS.h
 	#define MY_VOL_TO_PART
-	#include "sd_config.h"
+	#include "uSDFS.h"
+
 	#if FF_MULTI_PARTITION		/* Multiple partition configuration */ 
 		PARTITION VolToPart[] = {{DEV_SPI, 0}, //{ physical drive number, Partition: 0:Auto detect, 1-4:Forced partition)} 
 								 {DEV_SDHC,0}, 
@@ -262,10 +263,7 @@ char *fnamePrefix = "A";
 	#endif
 	// end of early definition
 
-
-
-  #include "uSDFS.h"
-  #include <USBHost_t36.h>
+	#include <USBHost_t36.h>
   USBHub hub1(nullptr);
   USBHub hub2(nullptr);
 
@@ -278,7 +276,6 @@ char *fnamePrefix = "A";
   #elif TEST_DRV == 3
     const char *Dev = "3:/";  // USB 2nd partition
   #endif
-//  PARTITION VolToPart[] = {{0,0}, {1,0}, {2,0}, {2,2}};  /* Volume - Partition resolution table */
 
   
   class mFS_class
@@ -427,7 +424,7 @@ class Logger_class
           float MBs = (MXRC*ndat)/(1.0f*(t1-t0));
           Serial.printf(" (%d - %f MB/s)\n (open: %d us; close: %d us; write: min,max: %d %d us)\n\r",
                             t1-t0,MBs, dto, dtc, dtwmin,dtwmax);
-          MSC_PrintCallStats();
+//          MSC_PrintCallStats();
           dtwmin=1<<31; dtwmax=0;
         }
       }
@@ -479,61 +476,6 @@ class Logger_class
 
 class Logger_class mLogger;
 
-/********** RTC ***************/
-#if defined(__IMXRT1062__)
-void rtc_init() 
-{ CCM_CCGR2 |= CCM_CCGR2_IOMUXC_SNVS(CCM_CCGR_ON);
-  SNVS_LPGPR = SNVS_DEFAULT_PGD_VALUE;
-  SNVS_LPSR = SNVS_LPSR_PGD_MASK;
-  // ? calibration
-  // ? tamper pins
-  
-  SNVS_LPCR &= ~SNVS_LPCR_LPTA_EN_MASK; // clear alarm
-  while (SNVS_LPCR & SNVS_LPCR_LPTA_EN_MASK); 
-  SNVS_LPTAR=0;
-
-  SNVS_LPCR |= 1;             // start RTC
-  while (!(SNVS_LPCR & 1));
-}
-
-void rtc_set_time(uint32_t secs) 
-{ //uint32_t secs = 1547051415;
-  SNVS_LPCR &= ~1;   // stop RTC
-  while (SNVS_LPCR & 1);
-  SNVS_LPSRTCMR = (uint32_t)(secs >> 17U);
-  SNVS_LPSRTCLR = (uint32_t)(secs << 15U);
-  SNVS_LPCR |= 1;             // start RTC
-  while (!(SNVS_LPCR & 1));
-}
-
-uint32_t rtc_secs() {
-  uint32_t seconds = 0;
-  uint32_t tmp = 0;
-
-  /* Do consecutive reads until value is correct */
-  do
-  { seconds = tmp;
-    tmp = (SNVS_LPSRTCMR << 17U) | (SNVS_LPSRTCLR >> 15U);
-  } while (tmp != seconds);
-
-  return seconds;
-}
-#else
-	#include "core_pins.h"
-	void rtc_init() {}
-	uint32_t rtc_secs() {return rtc_get();}
-	void rtc_set_time(uint32_t secs) {  rtc_set(secs);}
-#endif
- //needs definition in arduino build (compare with T3)
- //teensy4b2.build.flags.ld=-Wl,--gc-sections,--relax,--defsym=__rtc_localtime={extra.time.local} "-T{build.core.path}/imxrt1062.ld"
-extern void *__rtc_localtime;
-void rtc_sync(void)
-{
-  rtc_init();
-  if((uint32_t)&__rtc_localtime > (rtc_secs()+10))
-    rtc_set_time((uint32_t)&__rtc_localtime);   //LPSRTC will start at 0 otherwise
-
-}
 //=========================================================================
 void blink(uint16_t msec) { digitalWriteFast(13,!digitalReadFast(13)); delay(msec); }
 
@@ -543,9 +485,8 @@ void setup()
   pinMode(13,OUTPUT);
   pinMode(13,HIGH);
 
-  rtc_sync();
   struct tm tx;
-  tx=seconds2tm(rtc_secs());
+  tx=seconds2tm(rtc_get());
   
   while(!Serial);
   Serial.println("Test logger_RawWrite");
