@@ -1,6 +1,6 @@
 #ifndef uSDFS_H
 #define uSDFS_H 
-#define uSDFS_VER "03_Jun_19_21_40"
+#define uSDFS_VER "25_Jun_19_07_17"
 
 #include "ff.h"
 #include "utility/sd_config.h"
@@ -50,5 +50,16 @@ const char *FR_ERROR_STRING[] = {
 
 const char *fileSystem[] = {"No FS", "FS_FAT12","FS_FAT16","FS_FAT32","FS_EXFAT"};
 
+typedef struct tm
+{ int  tm_sec;
+  int tm_min;
+  int tm_hour;
+  int tm_mday;
+  int tm_mon;
+  int tm_year;
+  int tm_wday;
+  int tm_yday;
+  int tm_isdst;
+} tm_t;
 
 #endif
