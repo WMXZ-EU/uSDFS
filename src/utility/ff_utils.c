@@ -1,5 +1,5 @@
 
-#include <time.h>
+//#include <time.h>
 
 #if defined(__IMXRT1052__) || (__IMXRT1062__)
     #include "imxrt.h"
@@ -9,8 +9,8 @@
 
 #include "../ff.h"
 
-/*  
-  int  tm_sec;
+typedef struct tm
+{ int  tm_sec;
   int tm_min;
   int tm_hour;
   int tm_mday;
@@ -19,7 +19,8 @@
   int tm_wday;
   int tm_yday;
   int tm_isdst;
-*/
+} tm_t;
+
 // following routines are based on http://howardhinnant.github.io/date_algorithms.html
 struct tm seconds2tm(uint32_t tt)
 { struct tm tx;
