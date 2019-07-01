@@ -88,4 +88,7 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 	* added interface to GPT partitions (thanks to KurtE)
 
 
+### - 01-july-2019
+* Version 1.1.2
+	* removed compatibility issues with TimeLib library
 
