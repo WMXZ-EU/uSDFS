@@ -62,7 +62,10 @@ void blink(uint16_t msec)
   digitalWriteFast(13,!digitalReadFast(13)); delay(msec);
 }
 
-#include "time.h"
+#ifndef HAVETM
+  #include <time.h>
+  #define HAVETM
+#endif
 extern "C" struct tm seconds2tm(uint32_t tt);
 extern "C" struct tm decode_fattime (uint16_t td, uint16_t tt);
 

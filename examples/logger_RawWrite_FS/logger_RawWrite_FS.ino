@@ -45,7 +45,10 @@ const char *fnamePrefix = "A";
 
 //--------------------- For File Time settings ------------------
 #if USE_FS != uSDFS
+#ifndef HAVETM
   #include <time.h>
+  #define HAVETM
+#endif
   #define EPOCH_YEAR 1970 //T3 RTC
   #define LEAP_YEAR(Y) (((EPOCH_YEAR+Y)>0) && !((EPOCH_YEAR+Y)%4) && ( ((EPOCH_YEAR+Y)%100) || !((EPOCH_YEAR+Y)%400) ) )
   static  const uint8_t monthDays[]={31,28,31,30,31,30,31,31,30,31,30,31}; 
@@ -112,7 +115,10 @@ const char *fnamePrefix = "A";
     return tt;
   }
 #else
+#ifndef HAVETM
   #include <time.h>
+  #define HAVETM
+#endif
   extern "C" struct tm seconds2tm(uint32_t tt);
 #endif
 
