@@ -8,6 +8,10 @@ The Teensy library contains a port of ELM_CHaN's generic FAT file system for the
 * logger_RawWrite: testing writing to SD Cards
 
 # History:
+
+### - 09-aug-2020
+* added example with fatfs=malloc(sizeof(FATFS)); (issue11)
+
 ### - 01-july-2019
 * Version 1.1.2
 	* removed compatibility issues with TimeLib library
