@@ -26,7 +26,7 @@
 #ifndef _SD_CONIG_H
 #define _SD_CONIG_H
 
-#include "ff.h"
+#include "../ff.h"
 
 /* Definitions of physical drive number for each drive */
 #define DEV_SPI   0 /* Example: Map SPI card to physical drive 0 */
@@ -56,7 +56,7 @@
 #define SDHC_TRANSFERTYPE                   SDHC_TRANSFERTYPE_DMA 
 
 //MSC
-#define USE_MSC 1	// will be used in sd_msc.cpp
+#define USE_MSC 0	// will be used in sd_msc.cpp
 
 
 #endif
