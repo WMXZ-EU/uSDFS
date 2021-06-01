@@ -599,14 +599,21 @@ int sd_CardReadBlocks(void * buff, uint32_t sector, uint32_t count)
   dmaDone=0;
   SDHC_DSADDR  = (uint32_t)buff;
 
+  if((uint32_t)buff >= 0x20200000U)
+    arm_dcache_flush_delete((void *)buff, 512 * count);
+
   // send command
     SDHC_CMDARG = sector;
     SDHC_XFERTYP = count==1 ? SDHC_CMD17_XFERTYP: SDHC_CMD18_XFERTYP; 
 
   // wait for DMA
   while(!dmaDone);
+  
   SDHC_IRQSTAT &= (SDHC_IRQSTAT_CC | SDHC_IRQSTAT_TC);
 
+  if((uint32_t)buff >= 0x20200000U)
+	arm_dcache_flush_delete((void *)buff, 512 * count);
+  
 	// Auto CMD12 is enabled for DMA so call it if DMA error
 	if((SDHC_DSADDR < (uint32_t)(buff+(count*512))) && (count>1))
 		result=sd_CMD12_StopTransferWaitForBusy();
@@ -676,6 +683,9 @@ int sd_CardWriteBlocks(const void * buff, uint32_t sector, uint32_t count)
     }
   #endif
   SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(count) | SDHC_BLKATTR_BLKSIZE(512);
+
+  if((uint32_t)buff >= 0x20200000U)
+      arm_dcache_flush_delete((void *)buff, 512 * count);
 
   // enable DMA
   dmaDone=0;
