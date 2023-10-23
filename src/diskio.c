@@ -11,8 +11,10 @@
 #include "diskio.h"		/* Declarations of disk functions */
 
 #include "utility/sd_spi.h"
+#if 0
 #include "utility/sd_sdhc.h"
 #include "utility/sd_msc.h"
+#endif
 void logVar(char *s,unsigned int v);
 /*-----------------------------------------------------------------------*/
 /* Get Drive Status                                                      */
@@ -26,12 +28,13 @@ DSTATUS disk_status (
 	switch (pdrv) {
 	case DEV_SPI :
 		return SPI_disk_status();
-
+#if 0
 	case DEV_SDHC :
 		return SDHC_disk_status();
 
 	case DEV_MSC :
 		return MSC_disk_status();
+#endif
 	}
 	return STA_NOINIT;
 }
@@ -57,7 +60,7 @@ DSTATUS disk_initialize (
 		if(result==RES_OK) stat=0; else stat=STA_NODISK;
 
 		return stat;
-
+#if 0
 	case DEV_SDHC :
 		result = SDHC_disk_initialize();
 
@@ -73,6 +76,7 @@ DSTATUS disk_initialize (
 		if(result==RES_OK) stat=0; else stat=STA_NODISK;
 
 		return stat;
+#endif
 	}
 	return STA_NOINIT;
 }
@@ -100,7 +104,7 @@ DRESULT disk_read (
  	    if(result==0) res=RES_OK; else res=RES_READERROR;
 
 		return res;
-
+#if 0
 	case DEV_SDHC :
 		// translate the arguments here
 
@@ -118,7 +122,7 @@ DRESULT disk_read (
 		if(result==0) res=RES_OK; else res=RES_READERROR;
 
 		return res;
-
+#endif
 	}
 
 	return RES_PARERR;
@@ -151,7 +155,7 @@ DRESULT disk_write (
 		if(result==0) res=RES_OK; else res=RES_WRITEERROR;
 
 		return res;
-
+#if 0
 	case DEV_SDHC :
 		// translate the arguments here
 
@@ -169,6 +173,7 @@ DRESULT disk_write (
 		if(result==0) res=RES_OK; else res=RES_WRITEERROR;
 
 		return res;
+#endif
 	}
 
 	return RES_PARERR;
@@ -196,7 +201,7 @@ DRESULT disk_ioctl (
 		// Process of the command for the SPI drive
 
 //		return res;
-
+#if 0
 	case DEV_SDHC :
 		return SDHC_disk_ioctl(cmd,buff);
 
@@ -210,7 +215,7 @@ DRESULT disk_ioctl (
 		// Process of the command for the SDHC device
 
 //		return res;
-
+#endif
 		}
 
 	return RES_PARERR;

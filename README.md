@@ -1,13 +1,21 @@
 # uSDFS
 uSD File system based on ELM-CHaN generic FAT system
 
-The Teensy library contains a port of ELM_CHaN's generic FAT file system for the PJRC Teensy 3.5/6 ant Teensy 4 MCU.
+The Teensy library contains a port of ELM_CHaN's generic FAT file system for the PJRC Teensy 3.5/6 and Teensy 4 MCU.
 
 # Examples
 * uSDFS_test: basic test of uSD File system
 * logger_RawWrite: testing writing to SD Cards
 
 # History:
+
+### - 18-feb-2023
+* Version 1.1.4
+	* upgraded to ELM-CHaN's ff15
+
+### - 23-may-2021
+* Version 1.1.3
+	* upgraded to ELM-CHaN's ff14b
 
 ### - 09-aug-2020
 * added example with fatfs=malloc(sizeof(FATFS)); (issue11)

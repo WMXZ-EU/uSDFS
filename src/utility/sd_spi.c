@@ -23,8 +23,8 @@
  * SOFTWARE.
  */
  
-#include <stddef.h>
-#include "core_pins.h"
+#include <stdint.h>
+//#include "core_pins.h"
 //#include "usb_serial.h"
 //#define DO_DEBUG
 
@@ -94,7 +94,7 @@ DRESULT SPI_disk_ioctl(BYTE cmd, BYTE *buff)
     return RES_OK;
 }
 
-#if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) \
+#if 1 || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) \
 		|| defined(__IMXRT1052__) || defined(__IMXRT1062__) 
 
 /*************************************** SD ***********************************/
@@ -818,10 +818,10 @@ uint16_t sd_writeStop(void)
 
 #include <stdio.h>
 
-#include "core_pins.h"
-#include "usb_serial.h"
+//#include "core_pins.h"
+//#include "usb_serial.h"
 
-#if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
+#if 1 || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
 
 	#if defined(__MK20DX128__) || defined(__MK20DX256__)
 //		static KINETISK_SPI_t * SPI[] = {(KINETISK_SPI_t *)0x4002C000}; // does not compile with C, inly C++

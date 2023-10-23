@@ -1,9 +1,37 @@
 #ifndef uSDFS_H
 #define uSDFS_H 
-#define uSDFS_VER "30_Jun_19_07_17"
+#define uSDFS_VER "23_Oct_23_20_53"
 
 #include "ff.h"
 #include "utility/sd_config.h"
+
+#if FF_USE_STRFUNC != 1
+#error "FF_USE_STRFUNC != 1 in ffconf.h"
+#endif
+
+#if FF_CODE_PAGE != 850
+#error "F_CODE_PAGE != 850 in ffconf.h"
+#endif
+
+#if FF_USE_LFN	!= 1
+#error "FF_USE_LFN	!= 1 in ffconf.h"
+#endif
+
+#if FF_FS_RPATH	!= 1
+#error "FF_FS_RPATH	!= 1"
+#endif
+
+#if FF_VOLUMES != 10
+#error "FF_VOLUMES	!= 10 in ffconf.h"
+#endif
+
+#if FF_MULTI_PARTITION != 1
+#error "FF_MULTI_PARTITION != 1 in ffconf.h"
+#endif
+
+#if FF_FS_EXFAT	!= 1
+#error "FF_FS_EXFAT	!= 1 in ffconf.h"
+#endif
 
 #ifndef MY_VOL_TO_PART
 	#define MY_VOL_TO_PART

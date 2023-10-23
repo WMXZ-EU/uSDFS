@@ -1,12 +1,13 @@
 
 //#include <time.h>
-
+/*
 #if defined(__IMXRT1052__) || (__IMXRT1062__)
     #include "imxrt.h"
 #else
     #include "kinetis.h"
 #endif
-
+*/
+#include <stdint.h>
 #include "../ff.h"
 
 #ifndef HAVETM

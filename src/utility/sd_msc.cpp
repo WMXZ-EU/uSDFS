@@ -22,7 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include "core_pins.h"  // includes calls to kinetis.h or imxrt.h
+//#include "core_pins.h"  // includes calls to kinetis.h or imxrt.h
 
 #include "../diskio.h"
 #include "sd_msc.h"
