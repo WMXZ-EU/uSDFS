@@ -140,11 +140,23 @@ DSTATUS SDHC_disk_initialize()
 }
 
 DRESULT SDHC_disk_read(BYTE *buff, DWORD sector, UINT count)
-{	return (DRESULT) sd_CardReadBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
+{		
+	  #if defined(__IMXRT1062__)
+	  if((uint32_t)buff >= 0x20200000U)
+	    arm_dcache_delete((void *)buff, 512 * count);
+	  #endif
+
+	return (DRESULT) sd_CardReadBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
 }
 
 DRESULT SDHC_disk_write(const BYTE *buff, DWORD sector, UINT count)
-{	return (DRESULT) sd_CardWriteBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
+{	
+	
+	  #if defined(__IMXRT1062__)
+	  if((uint32_t)buff >= 0x20200000U)
+	    arm_dcache_flush_delete((void *)buff, 512 * count);
+	  #endif
+	return (DRESULT) sd_CardWriteBlocks((void *) buff, (uint32_t) sector, (uint32_t) count);
 }
 
 DRESULT SDHC_disk_ioctl(BYTE cmd, BYTE *buff)
